@@ -168,20 +168,22 @@ MonoBehaviour:
   useAsyncSceneLoading: 1
   slideImage: {fileID: 516437707}
   loadingSprites:
-  - {fileID: 21300000, guid: 56470ad13ae25e440b5c4499d575d9ab, type: 3}
+  - {fileID: 21300000, guid: 7481e1d55edb3814799d12a82699264a, type: 3}
   - {fileID: 21300000, guid: 4e0386a00b3733b419b23a1e6d8cf173, type: 3}
   - {fileID: 21300000, guid: 1555629501261104f900d7427aa7026f, type: 3}
+  - {fileID: 21300000, guid: 56470ad13ae25e440b5c4499d575d9ab, type: 3}
   - {fileID: 21300000, guid: 7481e1d55edb3814799d12a82699264a, type: 3}
   slideCaptions:
-  - Supere os desafios.
-  - Reconstrua a cidade.
-  - Cuide com os suprimentos fora do armazem.
-  - Cada escolha define o futuro da comunidade.
+  - "Cada prego martelado \xE9 um ato de rebeldia contra o fim do mundo."
+  - "Eles n\xE3o cansam, eles n\xE3o sentem. Voc\xEA n\xE3o pode se dar ao luxo de
+    fazer o mesmo."
+  - "Conhecimento \xE9 a \xFAnica chama que a escurid\xE3o n\xE3o pode apagar."
+  - "O mundo que conhec\xEDamos queimou, mas das cinzas n\xF3s nos levantaremos.."
   captionText: {fileID: 0}
   captionFont: {fileID: 12800000, guid: 621137ad8c54b5b49b9520d30bc2938c, type: 3}
   darkFadeOverlay: {fileID: 0}
-  slideDurationSeconds: 5
-  fadeDurationSeconds: 1.2
+  slideDurationSeconds: 7
+  fadeDurationSeconds: 1.5
   minimumSlideChangesBeforeFinish: 4
   allowSkip: 1
   useUnscaledTime: 1

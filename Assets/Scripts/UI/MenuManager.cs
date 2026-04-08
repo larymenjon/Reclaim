@@ -14,6 +14,7 @@ namespace Reclaim.UI
 
         [Header("Load Game")]
         [SerializeField] private string saveExistsPlayerPrefsKey = "reclaim.save.exists";
+        [SerializeField] private bool requireSaveDataForLoad;
         [SerializeField] private bool logWarningWhenNoSave = true;
 
         [Header("Options")]
@@ -36,7 +37,7 @@ namespace Reclaim.UI
 
         public void LoadGame()
         {
-            if (!HasSaveData)
+            if (requireSaveDataForLoad && !HasSaveData)
             {
                 if (logWarningWhenNoSave)
                 {
