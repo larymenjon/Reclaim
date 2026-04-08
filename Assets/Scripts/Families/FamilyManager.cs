@@ -18,7 +18,7 @@ namespace Reclaim.Survival.Families
         [SerializeField] private int randomSeed = 0;
         [Header("Fallback Setup")]
         [SerializeField] private bool useFallbackStartingFamilies = true;
-        [SerializeField] private int fallbackFamilyCount = 8;
+        [SerializeField] private int fallbackFamilyCount = 7;
         [SerializeField] private int fallbackMinMembers = 2;
         [SerializeField] private int fallbackMaxMembers = 5;
         [SerializeField, Range(0f, 100f)] private float fallbackInitialHunger = 14f;

@@ -10,7 +10,7 @@ namespace Reclaim.UI
     {
         [Header("Navigation")]
         [SerializeField] private string menuSceneName = "Menu";
-        [SerializeField] private string gameSceneName = "Game";
+        [SerializeField] private string gameSceneName = "Loading";
 
         [Header("Options Count")]
         [SerializeField, Min(1)] private int totalLeaders = 7;

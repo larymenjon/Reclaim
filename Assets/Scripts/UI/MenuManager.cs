@@ -10,7 +10,7 @@ namespace Reclaim.UI
     {
         [Header("Scenes")]
         [SerializeField] private string newGameSceneName = "NewGameSetup";
-        [SerializeField] private string loadGameSceneName = "Game";
+        [SerializeField] private string loadGameSceneName = "Loading";
 
         [Header("Load Game")]
         [SerializeField] private string saveExistsPlayerPrefsKey = "reclaim.save.exists";
