@@ -527,7 +527,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.UI.MenuManager
   newGameSceneName: NewGameSetup
-  loadGameSceneName: Game
+  loadGameSceneName: Loading
   saveExistsPlayerPrefsKey: reclaim.save.exists
   logWarningWhenNoSave: 1
   optionsPanel: {fileID: 1203462314}

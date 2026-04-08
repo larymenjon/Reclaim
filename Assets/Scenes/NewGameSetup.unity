@@ -292,7 +292,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.UI.NewGameSetupManager
   menuSceneName: Menu
-  gameSceneName: Game
+  gameSceneName: Loading
   totalLeaders: 7
   totalMaps: 3
   totalDifficulties: 3
