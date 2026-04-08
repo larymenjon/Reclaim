@@ -20,6 +20,7 @@ namespace Reclaim.Input
         [Header("Raycast")]
         [SerializeField] private LayerMask raycastMask = ~0;
         [SerializeField] private float maxRayDistance = 1000f;
+        [SerializeField] private bool preferTerrainHit = true;
 
         public event Action<GridCoordinate, Vector3> OnPointerMoved;
         public event Action<GridCoordinate, Vector3> OnPrimaryPressed;
@@ -121,6 +122,11 @@ namespace Reclaim.Input
 
         private bool TryGetWorldPoint(Ray ray, out Vector3 worldPoint)
         {
+            if (preferTerrainHit && TryGetTerrainHitPoint(ray, out worldPoint))
+            {
+                return true;
+            }
+
             if (Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, raycastMask, QueryTriggerInteraction.Ignore))
             {
                 worldPoint = hit.point;
@@ -136,6 +142,31 @@ namespace Reclaim.Input
 
             worldPoint = default;
             return false;
+        }
+
+        private bool TryGetTerrainHitPoint(Ray ray, out Vector3 worldPoint)
+        {
+            worldPoint = default;
+
+            Terrain terrain = Terrain.activeTerrain;
+            if (terrain == null)
+            {
+                return false;
+            }
+
+            TerrainCollider terrainCollider = terrain.GetComponent<TerrainCollider>();
+            if (terrainCollider == null || !terrainCollider.enabled)
+            {
+                return false;
+            }
+
+            if (!terrainCollider.Raycast(ray, out RaycastHit hit, maxRayDistance))
+            {
+                return false;
+            }
+
+            worldPoint = hit.point;
+            return true;
         }
 
         private static Vector2 GetMousePosition()

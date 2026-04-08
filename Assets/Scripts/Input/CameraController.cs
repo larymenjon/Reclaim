@@ -57,13 +57,18 @@ namespace Reclaim.Input
 
         [Header("Map Bounds")]
         [SerializeField] private bool useMapBounds = true;
+        [SerializeField] private Terrain mapTerrain;
+        [SerializeField] private bool autoBoundsFromTerrain = true;
+        [SerializeField] private bool centerOnTerrainAtStart = true;
         [SerializeField] private Renderer mapPlaneRenderer;
         [SerializeField] private bool autoBoundsFromPlaneRenderer = true;
+        [SerializeField] private bool disablePlaneWhenTerrainExists = true;
         [SerializeField] private float boundsPadding = 0.5f;
         [SerializeField] private Vector2 minBounds = new Vector2(-100f, -100f);
         [SerializeField] private Vector2 maxBounds = new Vector2(100f, 100f);
 
         private Vector3 _targetRigPosition;
+        private Vector3 _currentRigPosition;
         private Vector3 _currentPlanarVelocity;
 
         private float _targetYaw;
@@ -77,6 +82,7 @@ namespace Reclaim.Input
         private float _currentZoomDistance;
         private float _zoomDistanceVelocity;
         private float _zoomSpeed;
+        private bool _useOrbitCameraMode;
 
         private void Awake()
         {
@@ -96,18 +102,38 @@ namespace Reclaim.Input
                 return;
             }
 
+            // Orbit mode is used when the scene has no rig/pivot hierarchy.
+            // In this mode, this transform is the camera itself orbiting around a ground focus point.
+            _useOrbitCameraMode = cameraPivot == null || cameraPivot == transform || targetCamera.transform == transform;
+
             _targetRigPosition = transform.position;
+            _currentRigPosition = _targetRigPosition;
             _targetYaw = transform.eulerAngles.y;
             _currentYaw = _targetYaw;
 
-            _targetPitch = NormalizeAngle(cameraPivot.localEulerAngles.x);
+            _targetPitch = _useOrbitCameraMode
+                ? NormalizeAngle(transform.eulerAngles.x)
+                : NormalizeAngle(cameraPivot.localEulerAngles.x);
             _targetPitch = Mathf.Clamp(_targetPitch, minPitch, maxPitch);
             _currentPitch = _targetPitch;
 
-            _targetZoomDistance = Mathf.Clamp(Mathf.Abs(targetCamera.transform.localPosition.z), minZoomDistance, maxZoomDistance);
+            float initialZoomDistance;
+            if (_useOrbitCameraMode)
+            {
+                initialZoomDistance = Mathf.Max(minZoomDistance, Mathf.Abs(transform.position.y));
+            }
+            else
+            {
+                initialZoomDistance = Mathf.Abs(targetCamera.transform.localPosition.z);
+            }
+
+            _targetZoomDistance = Mathf.Clamp(initialZoomDistance, minZoomDistance, maxZoomDistance);
             _currentZoomDistance = _targetZoomDistance;
 
-            RefreshBoundsFromPlane();
+            ResolveTerrainReference();
+            DisableFallbackPlaneWhenNeeded();
+            RefreshBoundsFromSurface();
+            CenterCameraOnTerrainIfNeeded();
         }
 
         private void OnValidate()
@@ -117,7 +143,8 @@ namespace Reclaim.Input
             minPitch = Mathf.Clamp(minPitch, 5f, 89f);
             maxPitch = Mathf.Clamp(maxPitch, minPitch + 0.1f, 89f);
 
-            RefreshBoundsFromPlane();
+            ResolveTerrainReference();
+            RefreshBoundsFromSurface();
         }
 
         private void Update()
@@ -146,11 +173,19 @@ namespace Reclaim.Input
             Vector2 desiredPlanarInput = keyboardInput + edgeInput * edgeWeight + panInput;
             desiredPlanarInput = Vector2.ClampMagnitude(desiredPlanarInput, 1f);
 
-            Vector3 flatForward = transform.forward;
+            Vector3 forwardSource = _useOrbitCameraMode
+                ? Quaternion.Euler(0f, _targetYaw, 0f) * Vector3.forward
+                : transform.forward;
+
+            Vector3 flatForward = forwardSource;
             flatForward.y = 0f;
             flatForward.Normalize();
 
-            Vector3 flatRight = transform.right;
+            Vector3 rightSource = _useOrbitCameraMode
+                ? Quaternion.Euler(0f, _targetYaw, 0f) * Vector3.right
+                : transform.right;
+
+            Vector3 flatRight = rightSource;
             flatRight.y = 0f;
             flatRight.Normalize();
 
@@ -231,24 +266,40 @@ namespace Reclaim.Input
 
         private void ApplySmoothedState(float deltaTime)
         {
-            transform.position = Vector3.Lerp(
-                transform.position,
+            Vector3 smoothedRigPosition = Vector3.Lerp(
+                _currentRigPosition,
                 _targetRigPosition,
                 1f - Mathf.Exp(-12f * deltaTime)
             );
+            _currentRigPosition = smoothedRigPosition;
 
             _currentYaw = Mathf.SmoothDampAngle(_currentYaw, _targetYaw, ref _yawVelocity, rotationSmoothTime);
             _currentPitch = Mathf.SmoothDampAngle(_currentPitch, _targetPitch, ref _pitchVelocity, rotationSmoothTime);
             _currentZoomDistance = Mathf.SmoothDamp(_currentZoomDistance, _targetZoomDistance, ref _zoomDistanceVelocity, zoomSmoothTime);
 
-            transform.rotation = Quaternion.Euler(0f, _currentYaw, 0f);
-            cameraPivot.localRotation = Quaternion.Euler(_currentPitch, 0f, 0f);
+            if (_useOrbitCameraMode)
+            {
+                Quaternion orbitRotation = Quaternion.Euler(_currentPitch, _currentYaw, 0f);
+                Vector3 cameraOffset = orbitRotation * Vector3.back * _currentZoomDistance;
+                Vector3 cameraPosition = smoothedRigPosition + cameraOffset;
+                transform.SetPositionAndRotation(cameraPosition, orbitRotation);
+            }
+            else
+            {
+                transform.position = Vector3.Lerp(
+                    transform.position,
+                    _currentRigPosition,
+                    1f - Mathf.Exp(-12f * deltaTime)
+                );
+                transform.rotation = Quaternion.Euler(0f, _currentYaw, 0f);
+                cameraPivot.localRotation = Quaternion.Euler(_currentPitch, 0f, 0f);
 
-            Vector3 localPos = targetCamera.transform.localPosition;
-            localPos.x = 0f;
-            localPos.y = 0f;
-            localPos.z = -_currentZoomDistance;
-            targetCamera.transform.localPosition = localPos;
+                Vector3 localPos = targetCamera.transform.localPosition;
+                localPos.x = 0f;
+                localPos.y = 0f;
+                localPos.z = -_currentZoomDistance;
+                targetCamera.transform.localPosition = localPos;
+            }
         }
 
         private Vector2 GetMoveInput()
@@ -371,6 +422,12 @@ namespace Reclaim.Input
             }
 
             Ray ray = targetCamera.ScreenPointToRay(GetMousePosition());
+            if (TryGetTerrainRaycastHit(ray, out RaycastHit terrainHit))
+            {
+                point = terrainHit.point;
+                return true;
+            }
+
             if (Physics.Raycast(ray, out RaycastHit hit, 5000f, groundRaycastMask, QueryTriggerInteraction.Ignore))
             {
                 point = hit.point;
@@ -387,16 +444,93 @@ namespace Reclaim.Input
             return false;
         }
 
-        private void RefreshBoundsFromPlane()
+        private bool TryGetTerrainRaycastHit(Ray ray, out RaycastHit hit)
         {
+            hit = default;
+            if (mapTerrain == null)
+            {
+                return false;
+            }
+
+            TerrainCollider terrainCollider = mapTerrain.GetComponent<TerrainCollider>();
+            if (terrainCollider == null || !terrainCollider.enabled)
+            {
+                return false;
+            }
+
+            return terrainCollider.Raycast(ray, out hit, 5000f);
+        }
+
+        private void ResolveTerrainReference()
+        {
+            if (mapTerrain == null)
+            {
+                mapTerrain = FindFirstObjectByType<Terrain>();
+            }
+        }
+
+        private void DisableFallbackPlaneWhenNeeded()
+        {
+            if (!disablePlaneWhenTerrainExists || mapTerrain == null || mapPlaneRenderer == null)
+            {
+                return;
+            }
+
+            mapPlaneRenderer.enabled = false;
+
+            Collider planeCollider = mapPlaneRenderer.GetComponent<Collider>();
+            if (planeCollider != null)
+            {
+                planeCollider.enabled = false;
+            }
+        }
+
+        private void RefreshBoundsFromSurface()
+        {
+            if (autoBoundsFromTerrain && mapTerrain != null)
+            {
+                Vector3 terrainPosition = mapTerrain.transform.position;
+                Vector3 terrainSize = mapTerrain.terrainData != null ? mapTerrain.terrainData.size : Vector3.zero;
+
+                minBounds = new Vector2(terrainPosition.x + boundsPadding, terrainPosition.z + boundsPadding);
+                maxBounds = new Vector2(
+                    terrainPosition.x + terrainSize.x - boundsPadding,
+                    terrainPosition.z + terrainSize.z - boundsPadding
+                );
+                return;
+            }
+
             if (!autoBoundsFromPlaneRenderer || mapPlaneRenderer == null)
             {
                 return;
             }
 
-            Bounds b = mapPlaneRenderer.bounds;
-            minBounds = new Vector2(b.min.x + boundsPadding, b.min.z + boundsPadding);
-            maxBounds = new Vector2(b.max.x - boundsPadding, b.max.z - boundsPadding);
+            Bounds bounds = mapPlaneRenderer.bounds;
+            minBounds = new Vector2(bounds.min.x + boundsPadding, bounds.min.z + boundsPadding);
+            maxBounds = new Vector2(bounds.max.x - boundsPadding, bounds.max.z - boundsPadding);
+        }
+
+        private void CenterCameraOnTerrainIfNeeded()
+        {
+            if (!centerOnTerrainAtStart || mapTerrain == null || mapTerrain.terrainData == null)
+            {
+                return;
+            }
+
+            Vector3 terrainPosition = mapTerrain.transform.position;
+            Vector3 terrainSize = mapTerrain.terrainData.size;
+            Vector3 center = new Vector3(
+                terrainPosition.x + terrainSize.x * 0.5f,
+                Mathf.Max(terrainPosition.y + minZoomDistance, terrainPosition.y + 20f),
+                terrainPosition.z + terrainSize.z * 0.5f
+            );
+
+            _targetRigPosition = center;
+            _currentRigPosition = center;
+            _targetYaw = 0f;
+            _currentYaw = 0f;
+            _targetPitch = Mathf.Clamp(70f, minPitch, maxPitch);
+            _currentPitch = _targetPitch;
         }
 
         private static float NormalizeAngle(float angle)

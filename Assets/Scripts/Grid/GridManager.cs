@@ -13,6 +13,8 @@ namespace Reclaim.Grid
         [SerializeField] private int gridHeight = 32;
         [SerializeField] private float cellSize = 1f;
         [SerializeField] private Vector3 gridOrigin = Vector3.zero;
+        [SerializeField] private bool autoSyncFromTerrain = true;
+        [SerializeField] private Terrain sourceTerrain;
 
         [Header("Debug")]
         [SerializeField] private bool drawGizmos = true;
@@ -36,7 +38,13 @@ namespace Reclaim.Grid
 
         private void Awake()
         {
+            SyncFromTerrainIfNeeded();
             InitializeGrid();
+        }
+
+        private void OnValidate()
+        {
+            SyncFromTerrainIfNeeded();
         }
 
         public void InitializeGrid()
@@ -222,6 +230,31 @@ namespace Reclaim.Grid
             }
 
             return normalized;
+        }
+
+        private void SyncFromTerrainIfNeeded()
+        {
+            if (!autoSyncFromTerrain)
+            {
+                return;
+            }
+
+            if (sourceTerrain == null)
+            {
+                sourceTerrain = FindFirstObjectByType<Terrain>();
+            }
+
+            if (sourceTerrain == null || sourceTerrain.terrainData == null)
+            {
+                return;
+            }
+
+            Vector3 terrainOrigin = sourceTerrain.transform.position;
+            Vector3 terrainSize = sourceTerrain.terrainData.size;
+
+            gridOrigin = new Vector3(terrainOrigin.x, terrainOrigin.y, terrainOrigin.z);
+            gridWidth = Mathf.Max(1, Mathf.FloorToInt(terrainSize.x / Mathf.Max(0.001f, cellSize)));
+            gridHeight = Mathf.Max(1, Mathf.FloorToInt(terrainSize.z / Mathf.Max(0.001f, cellSize)));
         }
 
         private void OnDrawGizmosSelected()

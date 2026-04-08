@@ -789,7 +789,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39dd9f70c92a597459d858769191b609, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Input.CameraController
-  cameraPivot: {fileID: 0}
+  cameraPivot: {fileID: 919439578}
   targetCamera: {fileID: 330585545}
   moveSensitivity: 28
   edgeScrollSensitivity: 28
@@ -822,11 +822,15 @@ MonoBehaviour:
   enableRightMousePan: 1
   rightMousePanSensitivity: 0.28
   useMapBounds: 1
-  mapPlaneRenderer: {fileID: 1075713049}
+  mapTerrain: {fileID: 919439577}
+  autoBoundsFromTerrain: 1
+  centerOnTerrainAtStart: 1
+  mapPlaneRenderer: {fileID: 0}
   autoBoundsFromPlaneRenderer: 1
+  disablePlaneWhenTerrainExists: 1
   boundsPadding: 0.5
-  minBounds: {x: -98.86389, y: -46.3115}
-  maxBounds: {x: 98.86389, y: 46.3115}
+  minBounds: {x: -461.5, y: 0.5}
+  maxBounds: {x: 2037.5, y: 2499.5}
 --- !u!1 &388369695
 GameObject:
   m_ObjectHideFlags: 0
@@ -1742,7 +1746,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 898007997}
   m_CullTransparentMesh: 1
---- !u!1 &1075713047
+--- !u!1 &919439575
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1750,24 +1754,23 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1075713051}
-  - component: {fileID: 1075713050}
-  - component: {fileID: 1075713049}
-  - component: {fileID: 1075713048}
-  m_Layer: 3
-  m_Name: Plane
+  - component: {fileID: 919439578}
+  - component: {fileID: 919439577}
+  - component: {fileID: 919439576}
+  m_Layer: 0
+  m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!64 &1075713048
-MeshCollider:
+--- !u!154 &919439576
+TerrainCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075713047}
+  m_GameObject: {fileID: 919439575}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1776,80 +1779,62 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &1075713049
-MeshRenderer:
+  serializedVersion: 2
+  m_TerrainData: {fileID: 15600000, guid: 4d32e30b5f100b34092f0cddf84f008e, type: 2}
+  m_EnableTreeColliders: 1
+--- !u!218 &919439577
+Terrain:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075713047}
+  m_GameObject: {fileID: 919439575}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
+  serializedVersion: 6
+  m_TerrainData: {fileID: 15600000, guid: 4d32e30b5f100b34092f0cddf84f008e, type: 2}
+  m_TreeDistance: 5000
+  m_TreeBillboardDistance: 50
+  m_TreeCrossFadeLength: 5
+  m_TreeMaximumFullLODCount: 50
+  m_DetailObjectDistance: 80
+  m_DetailObjectDensity: 1
+  m_HeightmapPixelError: 5
+  m_SplatMapDistance: 1000
+  m_HeightmapMinimumLODSimplification: 0
+  m_HeightmapMaximumLOD: 0
+  m_ShadowCastingMode: 2
+  m_DrawHeightmap: 1
+  m_DrawInstanced: 0
+  m_DrawTreesAndFoliage: 1
   m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
+  m_IgnoreQualitySettings: 0
   m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 6494869af3e37a24e9d50a0b61a4a855, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
+  m_MaterialTemplate: {fileID: 2100000, guid: 594ea882c5a793440b60ff72d896021e, type: 2}
+  m_BakeLightProbesForTrees: 1
+  m_PreserveTreePrototypeLayers: 0
+  m_DeringLightProbesForTrees: 1
   m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &1075713050
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075713047}
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &1075713051
+  m_ScaleInLightmap: 0.01024
+  m_LightmapParameters: {fileID: 15203, guid: 0000000000000000f000000000000000, type: 0}
+  m_GroupingID: 0
+  m_RenderingLayerMask: 1
+  m_AllowAutoConnect: 1
+  m_EnableHeightmapRayTracing: 1
+  m_EnableTreesAndDetailsRayTracing: 0
+  m_TreeMotionVectorModeOverride: 3
+--- !u!4 &919439578
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075713047}
+  m_GameObject: {fileID: 919439575}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 19.872778, y: 1, z: 9.3623}
+  m_LocalPosition: {x: -462, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -2538,10 +2523,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebdf8bbf0770ae141b1d9ce0fc7b67bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Grid.GridManager
-  gridWidth: 10
-  gridHeight: 10
+  gridWidth: 2500
+  gridHeight: 2500
   cellSize: 1
-  gridOrigin: {x: 0, y: 0, z: 0}
+  gridOrigin: {x: -462, y: 0, z: 0}
+  autoSyncFromTerrain: 1
+  sourceTerrain: {fileID: 919439577}
   drawGizmos: 1
   gridLineColor: {r: 1, g: 1, b: 1, a: 0.3}
 --- !u!1 &1780329244
@@ -2730,6 +2717,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   maxRayDistance: 1000
+  preferTerrainHit: 1
 --- !u!1 &1930511375
 GameObject:
   m_ObjectHideFlags: 0
@@ -3010,8 +2998,8 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 600645985}
-  - {fileID: 1075713051}
   - {fileID: 388369699}
   - {fileID: 40826790}
   - {fileID: 23875492}
   - {fileID: 823168509}
+  - {fileID: 919439578}
