@@ -60,6 +60,9 @@ namespace Reclaim.Input
         [SerializeField] private Terrain mapTerrain;
         [SerializeField] private bool autoBoundsFromTerrain = true;
         [SerializeField] private bool centerOnTerrainAtStart = true;
+        [SerializeField] private float startupPitch = 60f;
+        [SerializeField] private float startupYaw = 0f;
+        [SerializeField] private float startupTerrainClearance = 35f;
         [SerializeField] private Renderer mapPlaneRenderer;
         [SerializeField] private bool autoBoundsFromPlaneRenderer = true;
         [SerializeField] private bool disablePlaneWhenTerrainExists = true;
@@ -96,15 +99,20 @@ namespace Reclaim.Input
                 targetCamera = GetComponentInChildren<Camera>();
             }
 
-            if (cameraPivot == null || targetCamera == null)
+            if (targetCamera == null)
             {
                 enabled = false;
                 return;
             }
 
+            bool hasValidPivotHierarchy = cameraPivot != null &&
+                                          cameraPivot != transform &&
+                                          cameraPivot.IsChildOf(transform) &&
+                                          targetCamera.transform.IsChildOf(cameraPivot);
+
             // Orbit mode is used when the scene has no rig/pivot hierarchy.
             // In this mode, this transform is the camera itself orbiting around a ground focus point.
-            _useOrbitCameraMode = cameraPivot == null || cameraPivot == transform || targetCamera.transform == transform;
+            _useOrbitCameraMode = !hasValidPivotHierarchy || targetCamera.transform == transform;
 
             _targetRigPosition = transform.position;
             _currentRigPosition = _targetRigPosition;
@@ -142,6 +150,8 @@ namespace Reclaim.Input
             maxZoomDistance = Mathf.Max(minZoomDistance + 0.01f, maxZoomDistance);
             minPitch = Mathf.Clamp(minPitch, 5f, 89f);
             maxPitch = Mathf.Clamp(maxPitch, minPitch + 0.1f, 89f);
+            startupPitch = Mathf.Clamp(startupPitch, minPitch, maxPitch);
+            startupTerrainClearance = Mathf.Max(1f, startupTerrainClearance);
 
             ResolveTerrainReference();
             RefreshBoundsFromSurface();
@@ -149,7 +159,12 @@ namespace Reclaim.Input
 
         private void Update()
         {
-            if (cameraPivot == null || targetCamera == null)
+            if (targetCamera == null)
+            {
+                return;
+            }
+
+            if (!_useOrbitCameraMode && cameraPivot == null)
             {
                 return;
             }
@@ -519,18 +534,26 @@ namespace Reclaim.Input
 
             Vector3 terrainPosition = mapTerrain.transform.position;
             Vector3 terrainSize = mapTerrain.terrainData.size;
+            float centerX = terrainPosition.x + terrainSize.x * 0.5f;
+            float centerZ = terrainPosition.z + terrainSize.z * 0.5f;
+            float sampledHeight = mapTerrain.SampleHeight(new Vector3(centerX, terrainPosition.y, centerZ)) + terrainPosition.y;
             Vector3 center = new Vector3(
-                terrainPosition.x + terrainSize.x * 0.5f,
-                Mathf.Max(terrainPosition.y + minZoomDistance, terrainPosition.y + 20f),
-                terrainPosition.z + terrainSize.z * 0.5f
+                centerX,
+                sampledHeight,
+                centerZ
             );
 
             _targetRigPosition = center;
             _currentRigPosition = center;
-            _targetYaw = 0f;
-            _currentYaw = 0f;
-            _targetPitch = Mathf.Clamp(70f, minPitch, maxPitch);
+            _targetYaw = startupYaw;
+            _currentYaw = startupYaw;
+            _targetPitch = Mathf.Clamp(startupPitch, minPitch, maxPitch);
             _currentPitch = _targetPitch;
+
+            float pitchSin = Mathf.Max(0.1f, Mathf.Sin(_targetPitch * Mathf.Deg2Rad));
+            float requiredDistance = startupTerrainClearance / pitchSin;
+            _targetZoomDistance = Mathf.Clamp(Mathf.Max(_targetZoomDistance, requiredDistance), minZoomDistance, maxZoomDistance);
+            _currentZoomDistance = _targetZoomDistance;
         }
 
         private static float NormalizeAngle(float angle)
