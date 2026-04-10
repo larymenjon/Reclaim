@@ -3,6 +3,7 @@ using Reclaim;
 using Reclaim.Core;
 using Reclaim.Grid;
 using Reclaim.Input;
+using Reclaim.UI;
 using UnityEngine;
 
 namespace Reclaim.Road
@@ -13,8 +14,12 @@ namespace Reclaim.Road
     public class RoadSystem : MonoBehaviour
     {
         [SerializeField] private GameObject roadPrefab;
+        [SerializeField, Min(0)] private int roadCoinCostPerCell = 0;
         [SerializeField] private float roadHeightOffset = 0.05f;
         [SerializeField] private Transform roadParent;
+        [SerializeField] private bool clickToConnectMode = true;
+        [SerializeField] private bool chainFromLastPoint = true;
+        [SerializeField] private TopHeaderHudController economyHud;
 
         private GridManager _gridManager;
         private PreviewSystem _previewSystem;
@@ -26,6 +31,8 @@ namespace Reclaim.Road
         private bool _isDeletingDrag;
         private GridCoordinate _lastDragCoordinate;
         private bool _isRoadPreviewActive;
+        private bool _hasLineAnchor;
+        private GridCoordinate _lineAnchorCoordinate;
 
         public void Initialize(
             GridManager gridManager,
@@ -38,6 +45,10 @@ namespace Reclaim.Road
             _previewSystem = previewSystem;
             _gameManager = gameManager;
             _history = history;
+            if (economyHud == null)
+            {
+                economyHud = FindFirstObjectByType<TopHeaderHudController>();
+            }
 
             inputHandler.OnPointerMoved += HandlePointerMoved;
             inputHandler.OnPrimaryPressed += HandlePrimaryPressed;
@@ -51,7 +62,25 @@ namespace Reclaim.Road
 
         public void SetRoadPrefab(GameObject prefab)
         {
+            SetRoadPlacementOptions(prefab, roadCoinCostPerCell);
+        }
+
+        public void SetRoadPlacementOptions(GameObject prefab, int coinCostPerCell)
+        {
+            if (prefab == null)
+            {
+                return;
+            }
+
             roadPrefab = prefab;
+            roadCoinCostPerCell = Mathf.Max(0, coinCostPerCell);
+            _isRoadPreviewActive = false;
+
+            if (_gameManager != null && _gameManager.CurrentMode == GameMode.Road)
+            {
+                EnsureRoadPreview();
+                _previewSystem.SetVisible(true);
+            }
         }
 
         private void HandlePointerMoved(GridCoordinate coordinate, Vector3 _)
@@ -71,6 +100,21 @@ namespace Reclaim.Road
         {
             if (_gameManager.CurrentMode != GameMode.Road || roadPrefab == null)
             {
+                return;
+            }
+
+            if (clickToConnectMode)
+            {
+                if (!_hasLineAnchor)
+                {
+                    _lineAnchorCoordinate = coordinate;
+                    _hasLineAnchor = true;
+                    return;
+                }
+
+                PlaceRoadLine(_lineAnchorCoordinate, coordinate);
+                _lineAnchorCoordinate = chainFromLastPoint ? coordinate : _lineAnchorCoordinate;
+                _hasLineAnchor = chainFromLastPoint;
                 return;
             }
 
@@ -135,6 +179,12 @@ namespace Reclaim.Road
         {
             if (_gameManager.CurrentMode == GameMode.Road)
             {
+                if (_hasLineAnchor)
+                {
+                    _hasLineAnchor = false;
+                    return;
+                }
+
                 _gameManager.SetMode(GameMode.None);
             }
         }
@@ -151,6 +201,7 @@ namespace Reclaim.Road
             _isDragging = false;
             _isDeletingDrag = false;
             _isRoadPreviewActive = false;
+            _hasLineAnchor = false;
             _previewSystem.SetVisible(false);
         }
 
@@ -198,12 +249,19 @@ namespace Reclaim.Road
                 return;
             }
 
+            int coinsToSpend = roadCoinCostPerCell;
+            if (coinsToSpend > 0 && (economyHud == null || !economyHud.TrySpendCoins(coinsToSpend)))
+            {
+                return;
+            }
+
             GameObject instance = Instantiate(roadPrefab, GetRoadWorldPosition(coordinate), Quaternion.identity, roadParent);
             Road road = instance.GetComponent<Road>();
             if (road == null)
             {
                 road = instance.AddComponent<Road>();
             }
+            road.SetPlacementCost(coinsToSpend);
 
             _roads[coordinate] = road;
             _gridManager.SetOccupancy(coordinate, OccupancyType.Road, instance);
@@ -213,6 +271,10 @@ namespace Reclaim.Road
             {
                 _roads.Remove(coordinate);
                 _gridManager.ClearOccupancy(coordinate, instance);
+                if (economyHud != null && road.CoinsSpentToPlace > 0)
+                {
+                    economyHud.AddCoins(road.CoinsSpentToPlace);
+                }
 
                 if (instance != null)
                 {
@@ -269,12 +331,19 @@ namespace Reclaim.Road
                     return;
                 }
 
+                int spentCoins = road != null ? road.CoinsSpentToPlace : 0;
+                if (spentCoins > 0 && (economyHud == null || !economyHud.TrySpendCoins(spentCoins)))
+                {
+                    return;
+                }
+
                 GameObject restored = Instantiate(roadPrefab, GetRoadWorldPosition(coordinate), Quaternion.identity, roadParent);
                 Road restoredRoad = restored.GetComponent<Road>();
                 if (restoredRoad == null)
                 {
                     restoredRoad = restored.AddComponent<Road>();
                 }
+                restoredRoad.SetPlacementCost(spentCoins);
 
                 _roads[coordinate] = restoredRoad;
                 _gridManager.SetOccupancy(coordinate, OccupancyType.Road, restored);

@@ -8,6 +8,12 @@ namespace Reclaim.Road
     public class Road : MonoBehaviour
     {
         public int ConnectionMask { get; private set; }
+        public int CoinsSpentToPlace { get; private set; }
+
+        public void SetPlacementCost(int coinsSpent)
+        {
+            CoinsSpentToPlace = Mathf.Max(0, coinsSpent);
+        }
 
         public void SetConnections(bool north, bool east, bool south, bool west)
         {

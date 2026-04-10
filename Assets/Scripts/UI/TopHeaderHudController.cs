@@ -11,6 +11,7 @@ namespace Reclaim.UI
         [SerializeField] private TMP_Text madeiraText;
         [SerializeField] private TMP_Text combustivelText;
         [SerializeField] private TMP_Text sucataText;
+        [SerializeField] private TMP_Text moedasText;
         [SerializeField] private TMP_Text casasText;
         [SerializeField] private TMP_Text contaminacaoText;
         [SerializeField] private TMP_Text reflorestamentoText;
@@ -26,6 +27,7 @@ namespace Reclaim.UI
         [SerializeField] private int startingWood = 120;
         [SerializeField] private float startingFuelMonths = 2f;
         [SerializeField] private int startingScrap = 120;
+        [SerializeField] private int startingCoins = 0;
         [SerializeField] private int startingHouses = 0;
         [SerializeField, Range(0f, 100f)] private float startingContaminationPercent = 0f;
         [SerializeField, Range(0f, 100f)] private float startingReforestationPercent = 0f;
@@ -46,6 +48,7 @@ namespace Reclaim.UI
         [SerializeField] private int woodPerMonth;
         [SerializeField] private float fuelMonthsPerMonth;
         [SerializeField] private int scrapPerMonth;
+        [SerializeField] private int coinsPerMonth;
         [SerializeField] private int housesPerMonth;
         [SerializeField] private float contaminationPercentPerMonth;
         [SerializeField] private float reforestationPercentPerMonth;
@@ -56,6 +59,7 @@ namespace Reclaim.UI
         public int Wood { get; private set; }
         public float FuelMonths { get; private set; }
         public int Scrap { get; private set; }
+        public int Coins { get; private set; }
         public int Houses { get; private set; }
         public float ContaminationPercent { get; private set; }
         public float ReforestationPercent { get; private set; }
@@ -94,6 +98,7 @@ namespace Reclaim.UI
             Wood = Mathf.Max(0, startingWood);
             FuelMonths = Mathf.Max(0f, startingFuelMonths);
             Scrap = Mathf.Max(0, startingScrap);
+            Coins = Mathf.Max(0, startingCoins);
             Houses = Mathf.Max(0, startingHouses);
             ContaminationPercent = Mathf.Clamp(startingContaminationPercent, 0f, 100f);
             ReforestationPercent = Mathf.Clamp(startingReforestationPercent, 0f, 100f);
@@ -109,6 +114,7 @@ namespace Reclaim.UI
             Wood = Mathf.Max(0, Wood + woodPerMonth);
             FuelMonths = Mathf.Max(0f, FuelMonths + fuelMonthsPerMonth);
             Scrap = Mathf.Max(0, Scrap + scrapPerMonth);
+            Coins = Mathf.Max(0, Coins + coinsPerMonth);
             Houses = Mathf.Max(0, Houses + housesPerMonth);
             ContaminationPercent = Mathf.Clamp(ContaminationPercent + contaminationPercentPerMonth, 0f, 100f);
             ReforestationPercent = Mathf.Clamp(ReforestationPercent + reforestationPercentPerMonth, 0f, 100f);
@@ -134,6 +140,29 @@ namespace Reclaim.UI
         {
             Houses = Mathf.Max(0, Houses + amount);
             RefreshHud();
+        }
+
+        public void AddCoins(int amount)
+        {
+            Coins = Mathf.Max(0, Coins + amount);
+            RefreshHud();
+        }
+
+        public bool TrySpendCoins(int amount)
+        {
+            if (amount <= 0)
+            {
+                return true;
+            }
+
+            if (Coins < amount)
+            {
+                return false;
+            }
+
+            Coins -= amount;
+            RefreshHud();
+            return true;
         }
 
         public void AddFamilies(int amount)
@@ -213,6 +242,7 @@ namespace Reclaim.UI
             if (madeiraText != null) madeiraText.text = $"{Wood}";
             if (combustivelText != null) combustivelText.text = $"{FuelMonths:0.#}";
             if (sucataText != null) sucataText.text = $"{Scrap}";
+            if (moedasText != null) moedasText.text = $"{Coins}";
             if (casasText != null) casasText.text = $"{Houses}";
             if (contaminacaoText != null) contaminacaoText.text = $"{ContaminationPercent:0.#}%";
             if (reflorestamentoText != null) reflorestamentoText.text = $"{ReforestationPercent:0.#}%";
