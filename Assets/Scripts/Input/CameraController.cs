@@ -20,11 +20,11 @@ namespace Reclaim.Input
         [SerializeField] private Camera targetCamera;
 
         [Header("Planar Movement")]
-        [SerializeField] private float moveSensitivity = 28f;
-        [SerializeField] private float edgeScrollSensitivity = 28f;
+        [SerializeField] private float moveSensitivity = 50f;
+        [SerializeField] private float edgeScrollSensitivity = 50f;
         [SerializeField] private int edgeSizePixels = 18;
-        [SerializeField] private float moveAcceleration = 90f;
-        [SerializeField] private float moveDeceleration = 110f;
+        [SerializeField] private float moveAcceleration = 150f;
+        [SerializeField] private float moveDeceleration = 180f;
         [SerializeField] private bool speedScalesWithZoom = true;
         [SerializeField] private float minZoomMoveMultiplier = 0.75f;
         [SerializeField] private float maxZoomMoveMultiplier = 1.35f;
