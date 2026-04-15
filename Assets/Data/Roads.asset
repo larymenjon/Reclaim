@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16f8fae51582feb4d9dd7c070038e6ea, type: 3}
   m_Name: Roads
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
-  id: building
-  displayName: New Building
-  prefab: {fileID: 0}
+  id: roads
+  displayName: Estrada
+  prefab: {fileID: 93971087374680374, guid: fdcdbc7d6a4ab2b408bd5ac0aa8d8a38, type: 3}
   size: {x: 1, y: 1}
   canRotate: 1
   description: Sem descricao.
-  woodCost: 10
+  woodCost: 0
   scrapCost: 0

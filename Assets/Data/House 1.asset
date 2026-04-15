@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16f8fae51582feb4d9dd7c070038e6ea, type: 3}
   m_Name: House 1
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
-  id: building
-  displayName: New Building
-  prefab: {fileID: 0}
-  size: {x: 1, y: 1}
+  id: House 1
+  displayName: House
+  prefab: {fileID: 9306672459593768, guid: f3a18c85cac27044aab164a4973d3539, type: 3}
+  size: {x: 2, y: 2}
   canRotate: 1
   description: "Pequena constru\xE7\xE3o que abriga 1 fam\xEDlia"
   woodCost: 10
