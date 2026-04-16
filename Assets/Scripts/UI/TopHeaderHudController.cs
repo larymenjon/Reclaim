@@ -7,7 +7,10 @@ namespace Reclaim.UI
     public class TopHeaderHudController : MonoBehaviour
     {
         [Header("Header Texts (TMP)")]
+        [SerializeField] private TMP_Text cidadeText;
         [SerializeField] private TMP_Text populacaoText;
+        [SerializeField] private TMP_Text comidaText;
+        [SerializeField] private TMP_Text aguaText;
         [SerializeField] private TMP_Text madeiraText;
         [SerializeField] private TMP_Text combustivelText;
         [SerializeField] private TMP_Text sucataText;
@@ -24,6 +27,8 @@ namespace Reclaim.UI
 
         [Header("Initial Values")]
         [SerializeField] private int startingFamilies = 7;
+        [SerializeField] private float startingFoodMonths = 3f;
+        [SerializeField] private float startingWaterPercent = 100f;
         [SerializeField] private int startingWood = 120;
         [SerializeField] private float startingFuelMonths = 2f;
         [SerializeField] private int startingScrap = 120;
@@ -43,6 +48,10 @@ namespace Reclaim.UI
         [SerializeField] private int houseWoodCost = 25;
         [SerializeField] private int houseScrapCost = 10;
 
+        [Header("Consumption Per Day")]
+        [SerializeField] private float foodConsumptionPerFamilyPerDay = 0.033f; // ~1 mês de comida por família
+        [SerializeField] private float waterConsumptionPerFamilyPerDay = 0.5f; // 0.5% de água por família por dia
+
         [Header("Progression Per Month")]
         [SerializeField] private int familiesPerMonth;
         [SerializeField] private int woodPerMonth;
@@ -56,6 +65,8 @@ namespace Reclaim.UI
         [SerializeField] private float defensePercentPerMonth;
 
         public int Families { get; private set; }
+        public float FoodMonths { get; private set; }
+        public float WaterPercent { get; private set; }
         public int Wood { get; private set; }
         public float FuelMonths { get; private set; }
         public int Scrap { get; private set; }
@@ -95,6 +106,8 @@ namespace Reclaim.UI
             EnsureStartingBudget();
 
             Families = Mathf.Max(0, startingFamilies);
+            FoodMonths = Mathf.Max(0f, startingFoodMonths);
+            WaterPercent = Mathf.Clamp(startingWaterPercent, 0f, 100f);
             Wood = Mathf.Max(0, startingWood);
             FuelMonths = Mathf.Max(0f, startingFuelMonths);
             Scrap = Mathf.Max(0, startingScrap);
@@ -171,6 +184,18 @@ namespace Reclaim.UI
             RefreshHud();
         }
 
+        public void AddFoodMonths(float amount)
+        {
+            FoodMonths = Mathf.Max(0f, FoodMonths + amount);
+            RefreshHud();
+        }
+
+        public void AddWaterPercent(float amountPercent)
+        {
+            WaterPercent = Mathf.Clamp(WaterPercent + amountPercent, 0f, 100f);
+            RefreshHud();
+        }
+
         public void AddFuelMonths(float amount)
         {
             FuelMonths = Mathf.Max(0f, FuelMonths + amount);
@@ -216,10 +241,26 @@ namespace Reclaim.UI
                 return;
             }
 
+            // Consumo diário de recursos
+            ConsumeDailyResources();
+
             if (day % daysPerMonth == 0)
             {
                 AdvanceMonth();
             }
+        }
+
+        private void ConsumeDailyResources()
+        {
+            // Consumo de comida
+            float foodConsumed = Families * foodConsumptionPerFamilyPerDay;
+            FoodMonths = Mathf.Max(0f, FoodMonths - foodConsumed);
+
+            // Consumo de água
+            float waterConsumed = Families * waterConsumptionPerFamilyPerDay;
+            WaterPercent = Mathf.Clamp(WaterPercent - waterConsumed, 0f, 100f);
+
+            RefreshHud();
         }
 
         private void EnsureStartingBudget()
@@ -238,7 +279,25 @@ namespace Reclaim.UI
 
         private void RefreshHud()
         {
-            if (populacaoText != null) populacaoText.text = $"{Families}";
+            // Nome da cidade
+            if (cidadeText != null) cidadeText.text = GetCityName();
+
+            // População com cálculo de casas (-3)
+            int housesNeeded = Mathf.CeilToInt(Families / 3f);
+            int housesAvailable = Houses;
+            int houseDeficit = Mathf.Max(0, housesNeeded - housesAvailable);
+            
+            if (populacaoText != null) 
+            {
+                if (houseDeficit > 0)
+                    populacaoText.text = $"{Families} (-{houseDeficit})";
+                else
+                    populacaoText.text = $"{Families}";
+            }
+
+            // Recursos
+            if (comidaText != null) comidaText.text = $"{FoodMonths:0.#}";
+            if (aguaText != null) aguaText.text = $"{WaterPercent:0.#}%";
             if (madeiraText != null) madeiraText.text = $"{Wood}";
             if (combustivelText != null) combustivelText.text = $"{FuelMonths:0.#}";
             if (sucataText != null) sucataText.text = $"{Scrap}";
@@ -248,6 +307,19 @@ namespace Reclaim.UI
             if (reflorestamentoText != null) reflorestamentoText.text = $"{ReforestationPercent:0.#}%";
             if (municaoText != null) municaoText.text = $"{AmmoMonths:0.#}";
             if (defesaText != null) defesaText.text = $"{DefensePercent:0.#}%";
+        }
+
+        private string GetCityName()
+        {
+            // Tenta obter o nome da cidade do NewGameSetupManager
+            var setupManager = FindObjectOfType<NewGameSetupManager>();
+            if (setupManager != null)
+            {
+                return setupManager.SelectedLeaderName;
+            }
+            
+            // Nome padrão se não encontrar
+            return "Nova Cidade";
         }
     }
 }

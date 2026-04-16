@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16f8fae51582feb4d9dd7c070038e6ea, type: 3}
-  m_Name: Roads
+  m_Name: Casa_Basica
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
-  id: Estrada
-  displayName: Estrada
-  prefab: {fileID: 2496890782489369210, guid: e3597318c0e039a4380611963b3e1d56, type: 3}
-  size: {x: 1, y: 1}
+  id: House1
+  displayName: House
+  prefab: {fileID: 1711739659646910795, guid: d7540b7accb4e4f4ca604d3ce4795d1e, type: 3}
+  size: {x: 2, y: 2}
   canRotate: 1
-  description: Sem descricao.
-  woodCost: 0
-  scrapCost: 0
+  description: "Pequena constru\xE7\xE3o que abriga 1 fam\xEDlia"
+  woodCost: 10
+  scrapCost: 25

@@ -71,7 +71,7 @@ namespace Reclaim.UI
             if (layoutElement != null)
             {
                 layoutElement.preferredWidth = maxWidth;
-                LayoutRebuilder.ForceRebuildLayoutHierarchy(_rectTransform);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_rectTransform);
             }
 
             // Position near button

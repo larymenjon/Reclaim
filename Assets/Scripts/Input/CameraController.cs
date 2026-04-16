@@ -7,10 +7,10 @@ namespace Reclaim.Input
 {
     /// <summary>
     /// RTS/city-builder camera controller (Manor Lords / Frostpunk style).
-    /// Hierarchy recommendation:
-    /// CameraRig (this script, yaw + planar movement)
-    ///   └─ CameraPivot (pitch)
-    ///       └─ Main Camera (local z = -zoom distance)
+    /// Hierarchy:
+    /// CameraRig (this script) -> Fica no chão (Y=0)
+    ///   └─ CameraPivot -> Controla a inclinação (Pitch)
+    ///       └─ Main Camera -> Controla o Zoom (Z local negativo)
     /// </summary>
     [DisallowMultipleComponent]
     public class CameraController : MonoBehaviour
@@ -26,47 +26,35 @@ namespace Reclaim.Input
         [SerializeField] private float moveAcceleration = 150f;
         [SerializeField] private float moveDeceleration = 180f;
         [SerializeField] private bool speedScalesWithZoom = true;
-        [SerializeField] private float minZoomMoveMultiplier = 0.75f;
-        [SerializeField] private float maxZoomMoveMultiplier = 1.35f;
+        [SerializeField] private float minZoomMoveMultiplier = 0.5f; // Mais lento quando perto
+        [SerializeField] private float maxZoomMoveMultiplier = 1.5f; // Mais rápido quando longe
 
         [Header("Zoom")]
-        [SerializeField] private float zoomSensitivity = 0.08f;
-        [SerializeField] private float zoomAcceleration = 26f;
+        [SerializeField] private float zoomSensitivity = 1.5f; // Aumentado para melhor resposta
+        [SerializeField] private float zoomAcceleration = 30f;
         [SerializeField] private float zoomDeceleration = 40f;
-        [SerializeField] private float zoomSmoothTime = 0.08f;
-        [SerializeField] private float minZoomDistance = 10f;
-        [SerializeField] private float maxZoomDistance = 55f;
+        [SerializeField] private float zoomSmoothTime = 0.12f;
+        [SerializeField] private float minZoomDistance = 8f;   // Perto para ver detalhes
+        [SerializeField] private float maxZoomDistance = 65f;  // Longe para estratégia
         [SerializeField] private bool zoomTowardMouse = true;
-        [SerializeField] private float zoomToMouseInfluence = 0.12f;
+        [SerializeField] private float zoomToMouseInfluence = 0.15f;
         [SerializeField] private LayerMask groundRaycastMask = ~0;
         [SerializeField] private float fallbackGroundHeight = 0f;
 
-        [Header("Rotation")]
+        [Header("Rotation & Auto-Pitch")]
         [SerializeField] private float yawSensitivity = 220f;
-        [SerializeField] private float pitchSensitivity = 160f;
         [SerializeField] private float keyboardYawSensitivity = 120f;
-        [SerializeField] private float minPitch = 30f;
-        [SerializeField] private float maxPitch = 80f;
-        [SerializeField] private float rotationSmoothTime = 0.06f;
+        [SerializeField] private float minPitch = 35f;  // Inclinação de horizonte (Zoom perto)
+        [SerializeField] private float maxPitch = 82f;  // Quase top-down (Zoom longe)
+        [SerializeField] private float rotationSmoothTime = 0.1f;
         [SerializeField] private bool enableMiddleMouseOrbit = true;
         [SerializeField] private bool enableKeyboardRotation = true;
-
-        [Header("Optional Panning")]
-        [SerializeField] private bool enableRightMousePan = true;
-        [SerializeField] private float rightMousePanSensitivity = 0.28f;
 
         [Header("Map Bounds")]
         [SerializeField] private bool useMapBounds = true;
         [SerializeField] private Terrain mapTerrain;
         [SerializeField] private bool autoBoundsFromTerrain = true;
-        [SerializeField] private bool centerOnTerrainAtStart = true;
-        [SerializeField] private float startupPitch = 60f;
-        [SerializeField] private float startupYaw = 0f;
-        [SerializeField] private float startupTerrainClearance = 35f;
-        [SerializeField] private Renderer mapPlaneRenderer;
-        [SerializeField] private bool autoBoundsFromPlaneRenderer = true;
-        [SerializeField] private bool disablePlaneWhenTerrainExists = true;
-        [SerializeField] private float boundsPadding = 0.5f;
+        [SerializeField] private float boundsPadding = 2f;
         [SerializeField] private Vector2 minBounds = new Vector2(-100f, -100f);
         [SerializeField] private Vector2 maxBounds = new Vector2(100f, 100f);
 
@@ -89,69 +77,22 @@ namespace Reclaim.Input
 
         private void Awake()
         {
-            if (cameraPivot == null && transform.childCount > 0)
-            {
-                cameraPivot = transform.GetChild(0);
-            }
+            if (cameraPivot == null && transform.childCount > 0) cameraPivot = transform.GetChild(0);
+            if (targetCamera == null) targetCamera = GetComponentInChildren<Camera>();
 
-            if (targetCamera == null)
-            {
-                targetCamera = GetComponentInChildren<Camera>();
-            }
+            if (targetCamera == null) { enabled = false; return; }
 
-            if (targetCamera == null)
-            {
-                enabled = false;
-                return;
-            }
-
-            bool hasValidPivotHierarchy = cameraPivot != null &&
-                                          cameraPivot != transform &&
-                                          cameraPivot.IsChildOf(transform) &&
-                                          targetCamera.transform.IsChildOf(cameraPivot);
-
-            // Orbit mode is used when the scene has no rig/pivot hierarchy.
-            // In this mode, this transform is the camera itself orbiting around a ground focus point.
-            _useOrbitCameraMode = !hasValidPivotHierarchy || targetCamera.transform == transform;
+            _useOrbitCameraMode = cameraPivot == null || targetCamera.transform == transform;
 
             _targetRigPosition = transform.position;
             _currentRigPosition = _targetRigPosition;
             _targetYaw = transform.eulerAngles.y;
             _currentYaw = _targetYaw;
 
-            _targetPitch = _useOrbitCameraMode
-                ? NormalizeAngle(transform.eulerAngles.x)
-                : NormalizeAngle(cameraPivot.localEulerAngles.x);
-            _targetPitch = Mathf.Clamp(_targetPitch, minPitch, maxPitch);
-            _currentPitch = _targetPitch;
-
-            float initialZoomDistance;
-            if (_useOrbitCameraMode)
-            {
-                initialZoomDistance = Mathf.Max(minZoomDistance, Mathf.Abs(transform.position.y));
-            }
-            else
-            {
-                initialZoomDistance = Mathf.Abs(targetCamera.transform.localPosition.z);
-            }
-
-            _targetZoomDistance = Mathf.Clamp(initialZoomDistance, minZoomDistance, maxZoomDistance);
+            // Inicializa zoom
+            float initialZoom = _useOrbitCameraMode ? Mathf.Abs(transform.position.y) : Mathf.Abs(targetCamera.transform.localPosition.z);
+            _targetZoomDistance = Mathf.Clamp(initialZoom, minZoomDistance, maxZoomDistance);
             _currentZoomDistance = _targetZoomDistance;
-
-            ResolveTerrainReference();
-            DisableFallbackPlaneWhenNeeded();
-            RefreshBoundsFromSurface();
-            CenterCameraOnTerrainIfNeeded();
-        }
-
-        private void OnValidate()
-        {
-            minZoomDistance = Mathf.Max(1f, minZoomDistance);
-            maxZoomDistance = Mathf.Max(minZoomDistance + 0.01f, maxZoomDistance);
-            minPitch = Mathf.Clamp(minPitch, 5f, 89f);
-            maxPitch = Mathf.Clamp(maxPitch, minPitch + 0.1f, 89f);
-            startupPitch = Mathf.Clamp(startupPitch, minPitch, maxPitch);
-            startupTerrainClearance = Mathf.Max(1f, startupTerrainClearance);
 
             ResolveTerrainReference();
             RefreshBoundsFromSurface();
@@ -159,20 +100,10 @@ namespace Reclaim.Input
 
         private void Update()
         {
-            if (targetCamera == null)
-            {
-                return;
-            }
-
-            if (!_useOrbitCameraMode && cameraPivot == null)
-            {
-                return;
-            }
-
             float dt = Time.deltaTime;
 
             ProcessMovement(dt);
-            ProcessRotation(dt);
+            ProcessRotation(dt); // Agora inclui o cálculo de Auto-Pitch
             ProcessZoom(dt);
             ClampTargets();
             ApplySmoothedState(dt);
@@ -182,38 +113,21 @@ namespace Reclaim.Input
         {
             Vector2 keyboardInput = GetMoveInput();
             Vector2 edgeInput = GetEdgeScrollInput();
-            Vector2 panInput = enableRightMousePan ? GetRightMousePanInput() : Vector2.zero;
+            
+            Vector2 desiredPlanarInput = Vector2.ClampMagnitude(keyboardInput + edgeInput, 1f);
 
-            float edgeWeight = moveSensitivity <= 0.0001f ? 0f : edgeScrollSensitivity / moveSensitivity;
-            Vector2 desiredPlanarInput = keyboardInput + edgeInput * edgeWeight + panInput;
-            desiredPlanarInput = Vector2.ClampMagnitude(desiredPlanarInput, 1f);
-
-            Vector3 forwardSource = _useOrbitCameraMode
-                ? Quaternion.Euler(0f, _targetYaw, 0f) * Vector3.forward
-                : transform.forward;
-
-            Vector3 flatForward = forwardSource;
+            Vector3 flatForward = transform.forward;
             flatForward.y = 0f;
             flatForward.Normalize();
 
-            Vector3 rightSource = _useOrbitCameraMode
-                ? Quaternion.Euler(0f, _targetYaw, 0f) * Vector3.right
-                : transform.right;
-
-            Vector3 flatRight = rightSource;
+            Vector3 flatRight = transform.right;
             flatRight.y = 0f;
             flatRight.Normalize();
 
-            float zoomMoveMultiplier = 1f;
-            if (speedScalesWithZoom)
-            {
-                float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
-                zoomMoveMultiplier = Mathf.Lerp(minZoomMoveMultiplier, maxZoomMoveMultiplier, zoomT);
-            }
+            float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
+            float speedMultiplier = speedScalesWithZoom ? Mathf.Lerp(minZoomMoveMultiplier, maxZoomMoveMultiplier, zoomT) : 1f;
 
-            Vector3 desiredVelocity = (flatRight * desiredPlanarInput.x + flatForward * desiredPlanarInput.y)
-                                      * moveSensitivity
-                                      * zoomMoveMultiplier;
+            Vector3 desiredVelocity = (flatRight * desiredPlanarInput.x + flatForward * desiredPlanarInput.y) * moveSensitivity * speedMultiplier;
 
             float acceleration = desiredVelocity.sqrMagnitude > 0.0001f ? moveAcceleration : moveDeceleration;
             _currentPlanarVelocity = Vector3.MoveTowards(_currentPlanarVelocity, desiredVelocity, acceleration * deltaTime);
@@ -223,71 +137,47 @@ namespace Reclaim.Input
 
         private void ProcessRotation(float deltaTime)
         {
+            // Rotação Y (Yaw)
             float yawDelta = 0f;
-            float pitchDelta = 0f;
-
             if (enableMiddleMouseOrbit && IsMiddleMouseHeld())
-            {
-                Vector2 mouseDelta = GetMouseDelta();
-                yawDelta += mouseDelta.x * yawSensitivity * deltaTime;
-                pitchDelta -= mouseDelta.y * pitchSensitivity * deltaTime;
-            }
-
+                yawDelta += GetMouseDelta().x * yawSensitivity * deltaTime;
             if (enableKeyboardRotation)
-            {
                 yawDelta += GetKeyboardYawInput() * keyboardYawSensitivity * deltaTime;
-            }
 
             _targetYaw += yawDelta;
-            _targetPitch = Mathf.Clamp(_targetPitch + pitchDelta, minPitch, maxPitch);
+
+            // LÓGICA DE AUTO-PITCH: A inclinação depende do Zoom
+            float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
+            _targetPitch = Mathf.Lerp(minPitch, maxPitch, zoomT);
         }
 
         private void ProcessZoom(float deltaTime)
         {
             float scrollDelta = GetScrollDeltaNormalized();
             if (Mathf.Approximately(scrollDelta, 0f))
-            {
                 _zoomSpeed = Mathf.MoveTowards(_zoomSpeed, 0f, zoomDeceleration * deltaTime);
-            }
             else
-            {
                 _zoomSpeed += scrollDelta * zoomAcceleration;
-            }
 
             _targetZoomDistance -= _zoomSpeed * zoomSensitivity;
             _targetZoomDistance = Mathf.Clamp(_targetZoomDistance, minZoomDistance, maxZoomDistance);
 
+            // Zoom na direção do mouse (Efeito Manor Lords)
             if (zoomTowardMouse && !Mathf.Approximately(scrollDelta, 0f) && TryGetMouseGroundPoint(out Vector3 mouseGroundPoint))
             {
                 Vector3 towardMouse = mouseGroundPoint - _targetRigPosition;
                 towardMouse.y = 0f;
-
                 float zoomT = 1f - Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
                 _targetRigPosition += towardMouse * (zoomToMouseInfluence * zoomT * Mathf.Abs(scrollDelta));
             }
         }
 
-        private void ClampTargets()
-        {
-            _targetZoomDistance = Mathf.Clamp(_targetZoomDistance, minZoomDistance, maxZoomDistance);
-            _targetPitch = Mathf.Clamp(_targetPitch, minPitch, maxPitch);
-
-            if (useMapBounds)
-            {
-                _targetRigPosition.x = Mathf.Clamp(_targetRigPosition.x, minBounds.x, maxBounds.x);
-                _targetRigPosition.z = Mathf.Clamp(_targetRigPosition.z, minBounds.y, maxBounds.y);
-            }
-        }
-
         private void ApplySmoothedState(float deltaTime)
         {
-            Vector3 smoothedRigPosition = Vector3.Lerp(
-                _currentRigPosition,
-                _targetRigPosition,
-                1f - Mathf.Exp(-12f * deltaTime)
-            );
-            _currentRigPosition = smoothedRigPosition;
+            // Suavização Exponencial para posição (mais fluida que Lerp simples)
+            _currentRigPosition = Vector3.Lerp(_currentRigPosition, _targetRigPosition, 1f - Mathf.Exp(-12f * deltaTime));
 
+            // Suavização das rotações
             _currentYaw = Mathf.SmoothDampAngle(_currentYaw, _targetYaw, ref _yawVelocity, rotationSmoothTime);
             _currentPitch = Mathf.SmoothDampAngle(_currentPitch, _targetPitch, ref _pitchVelocity, rotationSmoothTime);
             _currentZoomDistance = Mathf.SmoothDamp(_currentZoomDistance, _targetZoomDistance, ref _zoomDistanceVelocity, zoomSmoothTime);
@@ -295,275 +185,122 @@ namespace Reclaim.Input
             if (_useOrbitCameraMode)
             {
                 Quaternion orbitRotation = Quaternion.Euler(_currentPitch, _currentYaw, 0f);
-                Vector3 cameraOffset = orbitRotation * Vector3.back * _currentZoomDistance;
-                Vector3 cameraPosition = smoothedRigPosition + cameraOffset;
-                transform.SetPositionAndRotation(cameraPosition, orbitRotation);
+                transform.position = _currentRigPosition + (orbitRotation * Vector3.back * _currentZoomDistance);
+                transform.rotation = orbitRotation;
             }
             else
             {
-                transform.position = Vector3.Lerp(
-                    transform.position,
-                    _currentRigPosition,
-                    1f - Mathf.Exp(-12f * deltaTime)
-                );
+                // Aplica no Rig (Movimento e Yaw)
+                transform.position = _currentRigPosition;
                 transform.rotation = Quaternion.Euler(0f, _currentYaw, 0f);
+                
+                // Aplica no Pivot (Pitch dinâmico)
                 cameraPivot.localRotation = Quaternion.Euler(_currentPitch, 0f, 0f);
 
-                Vector3 localPos = targetCamera.transform.localPosition;
-                localPos.x = 0f;
-                localPos.y = 0f;
-                localPos.z = -_currentZoomDistance;
-                targetCamera.transform.localPosition = localPos;
+                // Aplica na Câmera (Zoom)
+                Vector3 localCamPos = targetCamera.transform.localPosition;
+                localCamPos.z = -_currentZoomDistance;
+                targetCamera.transform.localPosition = localCamPos;
             }
         }
 
+        private void ClampTargets()
+        {
+            if (useMapBounds)
+            {
+                _targetRigPosition.x = Mathf.Clamp(_targetRigPosition.x, minBounds.x, maxBounds.x);
+                _targetRigPosition.z = Mathf.Clamp(_targetRigPosition.z, minBounds.y, maxBounds.y);
+            }
+        }
+
+        // --- HELPERS DE INPUT ---
         private Vector2 GetMoveInput()
         {
-            Vector2 result = Vector2.zero;
-
+            Vector2 res = Vector2.zero;
 #if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null)
-            {
-                if (Keyboard.current.wKey.isPressed) result.y += 1f;
-                if (Keyboard.current.sKey.isPressed) result.y -= 1f;
-                if (Keyboard.current.dKey.isPressed) result.x += 1f;
-                if (Keyboard.current.aKey.isPressed) result.x -= 1f;
+            var k = Keyboard.current;
+            if (k != null) {
+                if (k.wKey.isPressed) res.y += 1; if (k.sKey.isPressed) res.y -= 1;
+                if (k.dKey.isPressed) res.x += 1; if (k.aKey.isPressed) res.x -= 1;
             }
 #else
-            if (UnityEngine.Input.GetKey(KeyCode.W)) result.y += 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.S)) result.y -= 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.D)) result.x += 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.A)) result.x -= 1f;
+            res.x = UnityEngine.Input.GetAxisRaw("Horizontal");
+            res.y = UnityEngine.Input.GetAxisRaw("Vertical");
 #endif
-
-            return result;
+            return res;
         }
 
-        private Vector2 GetEdgeScrollInput()
-        {
-            Vector2 mousePosition = GetMousePosition();
-            Vector2 result = Vector2.zero;
-
-            if (mousePosition.x >= Screen.width - edgeSizePixels) result.x += 1f;
-            if (mousePosition.x <= edgeSizePixels) result.x -= 1f;
-            if (mousePosition.y >= Screen.height - edgeSizePixels) result.y += 1f;
-            if (mousePosition.y <= edgeSizePixels) result.y -= 1f;
-
-            return result;
-        }
-
-        private Vector2 GetRightMousePanInput()
-        {
-            if (!IsRightMouseHeld())
-            {
-                return Vector2.zero;
-            }
-
-            Vector2 delta = GetMouseDelta();
-            Vector2 pan = new Vector2(-delta.x, -delta.y) * rightMousePanSensitivity;
-            return Vector2.ClampMagnitude(pan, 1f);
-        }
-
-        private static float GetKeyboardYawInput()
-        {
-            float value = 0f;
-
-#if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null)
-            {
-                if (Keyboard.current.qKey.isPressed) value -= 1f;
-                if (Keyboard.current.eKey.isPressed) value += 1f;
-            }
-#else
-            if (UnityEngine.Input.GetKey(KeyCode.Q)) value -= 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.E)) value += 1f;
-#endif
-
-            return value;
-        }
-
-        private static Vector2 GetMousePosition()
+        private float GetScrollDeltaNormalized()
         {
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-#else
-            return UnityEngine.Input.mousePosition;
-#endif
-        }
-
-        private static Vector2 GetMouseDelta()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
-#else
-            return new Vector2(UnityEngine.Input.GetAxis("Mouse X"), UnityEngine.Input.GetAxis("Mouse Y"));
-#endif
-        }
-
-        private static float GetScrollDeltaNormalized()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Mouse.current == null) return 0f;
-            return Mouse.current.scroll.ReadValue().y * 0.01f;
+            return Mouse.current != null ? Mouse.current.scroll.ReadValue().y * 0.01f : 0f;
 #else
             return UnityEngine.Input.GetAxis("Mouse ScrollWheel");
 #endif
         }
 
-        private static bool IsMiddleMouseHeld()
+        private Vector2 GetEdgeScrollInput()
         {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.middleButton.isPressed;
-#else
-            return UnityEngine.Input.GetMouseButton(2);
-#endif
+            Vector2 mouse = GetMousePosition();
+            Vector2 res = Vector2.zero;
+            if (mouse.x >= Screen.width - edgeSizePixels) res.x = 1;
+            else if (mouse.x <= edgeSizePixels) res.x = -1;
+            if (mouse.y >= Screen.height - edgeSizePixels) res.y = 1;
+            else if (mouse.y <= edgeSizePixels) res.y = -1;
+            return res * (edgeScrollSensitivity / moveSensitivity);
         }
 
-        private static bool IsRightMouseHeld()
-        {
+        private Vector2 GetMousePosition() => 
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.rightButton.isPressed;
+            Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 #else
-            return UnityEngine.Input.GetMouseButton(1);
+            UnityEngine.Input.mousePosition;
+#endif
+
+        private Vector2 GetMouseDelta() =>
+#if ENABLE_INPUT_SYSTEM
+            Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
+#else
+            new Vector2(UnityEngine.Input.GetAxis("Mouse X"), UnityEngine.Input.GetAxis("Mouse Y"));
+#endif
+
+        private bool IsMiddleMouseHeld() =>
+#if ENABLE_INPUT_SYSTEM
+            Mouse.current != null && Mouse.current.middleButton.isPressed;
+#else
+            UnityEngine.Input.GetMouseButton(2);
+#endif
+
+        private float GetKeyboardYawInput() {
+#if ENABLE_INPUT_SYSTEM
+            var k = Keyboard.current;
+            return k != null ? (k.qKey.isPressed ? -1 : (k.eKey.isPressed ? 1 : 0)) : 0;
+#else
+            return (UnityEngine.Input.GetKey(KeyCode.Q) ? -1 : (UnityEngine.Input.GetKey(KeyCode.E) ? 1 : 0));
 #endif
         }
 
         private bool TryGetMouseGroundPoint(out Vector3 point)
         {
-            point = default;
-            if (targetCamera == null)
-            {
-                return false;
-            }
-
+            point = Vector3.zero;
             Ray ray = targetCamera.ScreenPointToRay(GetMousePosition());
-            if (TryGetTerrainRaycastHit(ray, out RaycastHit terrainHit))
-            {
-                point = terrainHit.point;
-                return true;
-            }
-
-            if (Physics.Raycast(ray, out RaycastHit hit, 5000f, groundRaycastMask, QueryTriggerInteraction.Ignore))
-            {
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundRaycastMask)) {
                 point = hit.point;
                 return true;
             }
-
-            Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, fallbackGroundHeight, 0f));
-            if (groundPlane.Raycast(ray, out float enter))
-            {
-                point = ray.GetPoint(enter);
-                return true;
-            }
-
             return false;
         }
 
-        private bool TryGetTerrainRaycastHit(Ray ray, out RaycastHit hit)
-        {
-            hit = default;
-            if (mapTerrain == null)
-            {
-                return false;
-            }
-
-            TerrainCollider terrainCollider = mapTerrain.GetComponent<TerrainCollider>();
-            if (terrainCollider == null || !terrainCollider.enabled)
-            {
-                return false;
-            }
-
-            return terrainCollider.Raycast(ray, out hit, 5000f);
-        }
-
-        private void ResolveTerrainReference()
-        {
-            if (mapTerrain == null)
-            {
-                mapTerrain = FindFirstObjectByType<Terrain>();
-            }
-        }
-
-        private void DisableFallbackPlaneWhenNeeded()
-        {
-            if (!disablePlaneWhenTerrainExists || mapTerrain == null || mapPlaneRenderer == null)
-            {
-                return;
-            }
-
-            mapPlaneRenderer.enabled = false;
-
-            Collider planeCollider = mapPlaneRenderer.GetComponent<Collider>();
-            if (planeCollider != null)
-            {
-                planeCollider.enabled = false;
-            }
-        }
+        private void ResolveTerrainReference() { if (mapTerrain == null) mapTerrain = FindFirstObjectByType<Terrain>(); }
 
         private void RefreshBoundsFromSurface()
         {
-            if (autoBoundsFromTerrain && mapTerrain != null)
-            {
-                Vector3 terrainPosition = mapTerrain.transform.position;
-                Vector3 terrainSize = mapTerrain.terrainData != null ? mapTerrain.terrainData.size : Vector3.zero;
-
-                minBounds = new Vector2(terrainPosition.x + boundsPadding, terrainPosition.z + boundsPadding);
-                maxBounds = new Vector2(
-                    terrainPosition.x + terrainSize.x - boundsPadding,
-                    terrainPosition.z + terrainSize.z - boundsPadding
-                );
-                return;
+            if (autoBoundsFromTerrain && mapTerrain != null) {
+                Vector3 pos = mapTerrain.transform.position;
+                Vector3 size = mapTerrain.terrainData.size;
+                minBounds = new Vector2(pos.x + boundsPadding, pos.z + boundsPadding);
+                maxBounds = new Vector2(pos.x + size.x - boundsPadding, pos.z + size.z - boundsPadding);
             }
-
-            if (!autoBoundsFromPlaneRenderer || mapPlaneRenderer == null)
-            {
-                return;
-            }
-
-            Bounds bounds = mapPlaneRenderer.bounds;
-            minBounds = new Vector2(bounds.min.x + boundsPadding, bounds.min.z + boundsPadding);
-            maxBounds = new Vector2(bounds.max.x - boundsPadding, bounds.max.z - boundsPadding);
-        }
-
-        private void CenterCameraOnTerrainIfNeeded()
-        {
-            if (!centerOnTerrainAtStart || mapTerrain == null || mapTerrain.terrainData == null)
-            {
-                return;
-            }
-
-            Vector3 terrainPosition = mapTerrain.transform.position;
-            Vector3 terrainSize = mapTerrain.terrainData.size;
-            float centerX = terrainPosition.x + terrainSize.x * 0.5f;
-            float centerZ = terrainPosition.z + terrainSize.z * 0.5f;
-            float sampledHeight = mapTerrain.SampleHeight(new Vector3(centerX, terrainPosition.y, centerZ)) + terrainPosition.y;
-            Vector3 center = new Vector3(
-                centerX,
-                sampledHeight,
-                centerZ
-            );
-
-            _targetRigPosition = center;
-            _currentRigPosition = center;
-            _targetYaw = startupYaw;
-            _currentYaw = startupYaw;
-            _targetPitch = Mathf.Clamp(startupPitch, minPitch, maxPitch);
-            _currentPitch = _targetPitch;
-
-            float pitchSin = Mathf.Max(0.1f, Mathf.Sin(_targetPitch * Mathf.Deg2Rad));
-            float requiredDistance = startupTerrainClearance / pitchSin;
-            _targetZoomDistance = Mathf.Clamp(Mathf.Max(_targetZoomDistance, requiredDistance), minZoomDistance, maxZoomDistance);
-            _currentZoomDistance = _targetZoomDistance;
-        }
-
-        private static float NormalizeAngle(float angle)
-        {
-            if (angle > 180f)
-            {
-                angle -= 360f;
-            }
-
-            return angle;
         }
     }
 }
