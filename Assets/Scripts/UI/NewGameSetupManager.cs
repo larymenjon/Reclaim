@@ -28,11 +28,25 @@ namespace Reclaim.UI
         private const string DifficultyIndexKey = "reclaim.newgame.difficulty_index";
         private const string MapIndexKey = "reclaim.newgame.map_index";
         private const string DefaultsAppliedKey = "reclaim.newgame.defaults_applied";
+        
+        // Flag Configuration Keys
+        private const string FlagBackgroundKey = "reclaim.newgame.flag_background";
+        private const string FlagSymbolColorKey = "reclaim.newgame.flag_symbol_color";
+        private const string FlagSymbolKey = "reclaim.newgame.flag_symbol";
+        private const string FlagBgColorKey = "reclaim.newgame.flag_bg_color";
+        private const string FlagSymbolColorHexKey = "reclaim.newgame.flag_symbol_color_hex";
 
         public int SelectedLeaderIndex => ClampSelection(PlayerPrefs.GetInt(LeaderIndexKey, defaultLeaderIndex), totalLeaders);
         public int SelectedDifficultyIndex => ClampSelection(PlayerPrefs.GetInt(DifficultyIndexKey, defaultDifficultyIndex), totalDifficulties);
         public int SelectedMapIndex => ClampSelection(PlayerPrefs.GetInt(MapIndexKey, defaultMapIndex), totalMaps);
         public string SelectedLeaderName => PlayerPrefs.GetString(LeaderNameKey, defaultLeaderName);
+
+        // Flag Configuration Properties
+        public int SelectedFlagBackground => PlayerPrefs.GetInt(FlagBackgroundKey, 0);
+        public int SelectedFlagSymbolColor => PlayerPrefs.GetInt(FlagSymbolColorKey, 0);
+        public int SelectedFlagSymbol => PlayerPrefs.GetInt(FlagSymbolKey, 0);
+        public string SelectedFlagBgColor => PlayerPrefs.GetString(FlagBgColorKey, "FFFFFF");
+        public string SelectedFlagSymbolColorHex => PlayerPrefs.GetString(FlagSymbolColorHexKey, "000000");
 
         private void Start()
         {
