@@ -28,6 +28,7 @@ namespace Reclaim.UI
 
         [Header("References")]
         [SerializeField] private NewGameSetupManager manager;
+        [SerializeField] private CharacterSelectionUI characterSelection;
 
         [Header("Leader Slots (exactly 7)")]
         [SerializeField] private LeaderSlot[] leaders = new LeaderSlot[7];
@@ -37,8 +38,10 @@ namespace Reclaim.UI
         [SerializeField] private MapSlot[] maps = new MapSlot[3];
 
         [Header("Selection Colors")]
-        [SerializeField] private Color normalBorderColor = new(0.45f, 0.45f, 0.45f, 1f);
-        [SerializeField] private Color selectedBorderColor = new(0.4f, 0.95f, 0.55f, 1f);
+        [SerializeField] private Color normalBorderColor = new Color(0.45f, 0.45f, 0.45f, 1f);
+        [SerializeField] private Color selectedBorderColor = new Color(0.4f, 0.95f, 0.55f, 1f);
+
+        private bool buttonsBound;
 
         private void Start()
         {
@@ -46,33 +49,74 @@ namespace Reclaim.UI
             {
                 manager = GetComponent<NewGameSetupManager>();
             }
+            
+            if (manager == null)
+            {
+                manager = GetComponentInParent<NewGameSetupManager>();
+            }
 
             if (manager == null)
             {
                 Debug.LogWarning("NewGameSetupSelectionUI: missing NewGameSetupManager reference.");
                 return;
             }
+            
+            if (characterSelection == null)
+            {
+                characterSelection = GetComponent<CharacterSelectionUI>();
+            }
+            
+            if (characterSelection == null)
+            {
+                characterSelection = GetComponentInParent<CharacterSelectionUI>();
+            }
 
             ApplyPortraits();
             ApplyMapLabels();
-            BindButtons();
+            if (!buttonsBound)
+            {
+                BindButtons();
+                buttonsBound = true;
+            }
             RefreshSelectionVisuals();
         }
 
         public void SelectLeaderFromUI(int index)
         {
+            if (manager == null || index < 0 || index >= leaders.Length)
+            {
+                return;
+            }
+
+            // If CharacterSelectionUI is present, route selection through it so text/description stay synced.
+            if (characterSelection != null)
+            {
+                characterSelection.SelectLeader(index);
+                return;
+            }
+
             manager.SetLeader(index);
             RefreshSelectionVisuals();
         }
 
         public void SelectMapFromUI(int index)
         {
+            if (manager == null || index < 0 || index >= maps.Length)
+            {
+                return;
+            }
+
             manager.SetMap(index);
             RefreshSelectionVisuals();
         }
 
         public void RefreshSelectionVisuals()
         {
+            if (manager == null)
+            {
+                return;
+            }
+
             int selectedLeader = manager.SelectedLeaderIndex;
             for (int i = 0; i < leaders.Length; i++)
             {
@@ -96,25 +140,70 @@ namespace Reclaim.UI
         {
             for (int i = 0; i < leaders.Length; i++)
             {
-                if (leaders[i]?.button == null)
+                if (leaders[i] == null)
                 {
                     continue;
                 }
 
                 int captured = i;
-                leaders[i].button.onClick.AddListener(() => SelectLeaderFromUI(captured));
+                Button button = leaders[i].button;
+
+                // If no explicit button was assigned, make the portrait (or border) clickable.
+                if (button == null)
+                {
+                    button = EnsureClickableButton(leaders[i].portrait, leaders[i].border);
+                    leaders[i].button = button;
+                }
+
+                if (button != null)
+                {
+                    button.onClick.AddListener(() => SelectLeaderFromUI(captured));
+                }
             }
 
             for (int i = 0; i < maps.Length; i++)
             {
-                if (maps[i]?.button == null)
+                if (maps[i] == null)
                 {
                     continue;
                 }
 
                 int captured = i;
-                maps[i].button.onClick.AddListener(() => SelectMapFromUI(captured));
+                Button button = maps[i].button;
+
+                if (button == null)
+                {
+                    button = EnsureClickableButton(null, maps[i].border);
+                    maps[i].button = button;
+                }
+
+                if (button != null)
+                {
+                    button.onClick.AddListener(() => SelectMapFromUI(captured));
+                }
             }
+        }
+
+        private static Button EnsureClickableButton(Image preferredTarget, Image fallbackTarget)
+        {
+            Image targetImage = preferredTarget != null ? preferredTarget : fallbackTarget;
+            if (targetImage == null)
+            {
+                return null;
+            }
+
+            Button button = targetImage.GetComponent<Button>();
+            if (button == null)
+            {
+                button = targetImage.gameObject.AddComponent<Button>();
+            }
+
+            if (button.targetGraphic == null)
+            {
+                button.targetGraphic = targetImage;
+            }
+
+            return button;
         }
 
         private void ApplyPortraits()

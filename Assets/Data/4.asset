@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
+  m_Name: 4
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  leaderName: Nara Sun
+  description: "Nara nunca se sentiu confort\xE1vel sob um teto. Ela conhece as rotas
+    silenciosas e os perigos que espreitam nas ru\xEDnas.\n\nExpedi\xE7\xF5es retornam
+    mais r\xE1pido e t\xEAm maior chance de encontrar itens raros."
+  catchphrase: "O mundo l\xE1 fora \xE9 um monstro, mas eu sei como n\xE3o ser devorada
+    por ele."
+  subDescription: "A Exploradora N\xF4made"
+  portrait: {fileID: 21300000, guid: 3a57e14d660a85047865e3ee5264d925, type: 3}
+  foodEfficiency: 1
+  explorationSpeed: 1
+  startingScrap: 100

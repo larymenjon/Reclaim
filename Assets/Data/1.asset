@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
+  m_Name: 1
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  leaderName: Helena Kravik
+  description: "Elena v\xEA o mundo como um conjunto de engrenagens quebradas. Ela
+    n\xE3o acredita em milagres, apenas em funda\xE7\xF5es s\xF3lidas e a\xE7o refor\xE7ado. 
+    \n\nReduz o custo de materiais de constru\xE7\xE3o e aumenta a durabilidade das
+    estruturas."
+  catchphrase: "Esperan\xE7a n\xE3o constr\xF3i muros. Concreto e c\xE1lculo, sim."
+  subDescription: "A Engenheira Pragm\xE1tica"
+  portrait: {fileID: 21300000, guid: 34789fa8bc84ed74dac06f8fc18d5b9c, type: 3}
+  foodEfficiency: 1
+  explorationSpeed: 10
+  startingScrap: 100
