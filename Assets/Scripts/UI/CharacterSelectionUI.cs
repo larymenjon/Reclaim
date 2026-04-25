@@ -18,7 +18,11 @@ namespace Reclaim.UI
         [SerializeField] private TextMeshProUGUI subDescriptionText; 
         [SerializeField] private TextMeshProUGUI descriptionText;    
         [SerializeField] private TextMeshProUGUI phraseText;        
-        [SerializeField] private Image bigDisplayPortrait;        
+        [SerializeField] private Image bigDisplayPortrait;
+
+        [Header("UI Icon")]
+        [SerializeField] private Image iconImage;
+        [SerializeField] private Sprite[] icon = new Sprite[7];
 
         private int currentIndex = 0;
 
@@ -98,6 +102,12 @@ namespace Reclaim.UI
             if(descriptionText) descriptionText.text = selected.description;
             if(phraseText) phraseText.text = $"\"{selected.catchphrase}\"";
             if(bigDisplayPortrait) bigDisplayPortrait.sprite = selected.portrait;
+            if(iconImage)
+            {
+                Sprite selectedIcon = (icon != null && currentIndex < icon.Length) ? icon[currentIndex] : null;
+                iconImage.sprite = selectedIcon;
+                iconImage.enabled = selectedIcon != null;
+            }
             
             // Chama o outro script para atualizar as bordas
             if (visualUI != null) visualUI.RefreshSelectionVisuals();
