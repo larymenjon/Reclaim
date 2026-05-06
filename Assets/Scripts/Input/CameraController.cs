@@ -5,13 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Reclaim.Input
 {
-    /// <summary>
-    /// RTS/city-builder camera controller (Manor Lords / Frostpunk style).
-    /// Hierarchy:
-    /// CameraRig (this script) -> Fica no chão (Y=0)
-    ///   └─ CameraPivot -> Controla a inclinação (Pitch)
-    ///       └─ Main Camera -> Controla o Zoom (Z local negativo)
-    /// </summary>
     [DisallowMultipleComponent]
     public class CameraController : MonoBehaviour
     {
@@ -25,17 +18,22 @@ namespace Reclaim.Input
         [SerializeField] private int edgeSizePixels = 18;
         [SerializeField] private float moveAcceleration = 150f;
         [SerializeField] private float moveDeceleration = 180f;
+        [SerializeField] private float keyboardAccelerationMultiplier = 1.5f;
+        [SerializeField] private float directionChangeBoost = 1.2f;
         [SerializeField] private bool speedScalesWithZoom = true;
-        [SerializeField] private float minZoomMoveMultiplier = 0.5f; // Mais lento quando perto
-        [SerializeField] private float maxZoomMoveMultiplier = 1.5f; // Mais rápido quando longe
+        [SerializeField] private float minZoomMoveMultiplier = 0.5f;
+        [SerializeField] private float maxZoomMoveMultiplier = 1.5f;
+        [SerializeField] private float edgeSpeedMultiplier = 0.35f;
+        [SerializeField] private float edgeRampExponent = 2f;
 
         [Header("Zoom")]
-        [SerializeField] private float zoomSensitivity = 1.5f; // Aumentado para melhor resposta
-        [SerializeField] private float zoomAcceleration = 30f;
-        [SerializeField] private float zoomDeceleration = 40f;
-        [SerializeField] private float zoomSmoothTime = 0.12f;
-        [SerializeField] private float minZoomDistance = 8f;   // Perto para ver detalhes
-        [SerializeField] private float maxZoomDistance = 65f;  // Longe para estratégia
+        [SerializeField] private float zoomSensitivity = 0.75f;
+        [SerializeField] private float zoomAcceleration = 12f;
+        [SerializeField] private float zoomDeceleration = 16f;
+        [SerializeField] private float zoomSmoothTime = 0.2f;
+        [SerializeField] private float maxZoomSpeed = 4f;
+        [SerializeField] private float minZoomDistance = 8f;
+        [SerializeField] private float maxZoomDistance = 65f;
         [SerializeField] private bool zoomTowardMouse = true;
         [SerializeField] private float zoomToMouseInfluence = 0.15f;
         [SerializeField] private LayerMask groundRaycastMask = ~0;
@@ -44,8 +42,8 @@ namespace Reclaim.Input
         [Header("Rotation & Auto-Pitch")]
         [SerializeField] private float yawSensitivity = 220f;
         [SerializeField] private float keyboardYawSensitivity = 120f;
-        [SerializeField] private float minPitch = 35f;  // Inclinação de horizonte (Zoom perto)
-        [SerializeField] private float maxPitch = 82f;  // Quase top-down (Zoom longe)
+        [SerializeField] private float minPitch = 35f;
+        [SerializeField] private float maxPitch = 82f;
         [SerializeField] private float rotationSmoothTime = 0.1f;
         [SerializeField] private bool enableMiddleMouseOrbit = true;
         [SerializeField] private bool enableKeyboardRotation = true;
@@ -55,6 +53,11 @@ namespace Reclaim.Input
         [SerializeField] private Terrain mapTerrain;
         [SerializeField] private bool autoBoundsFromTerrain = true;
         [SerializeField] private float boundsPadding = 2f;
+        [SerializeField] private bool keepCameraViewInsideBounds = true;
+        [SerializeField] private float cameraViewEdgePadding = 1.5f;
+        [SerializeField] private bool useElasticEdgeResistance = true;
+        [SerializeField] private float edgeResistanceDistance = 8f;
+        [SerializeField] private float minEdgeSpeedFactor = 0.2f;
         [SerializeField] private Vector2 minBounds = new Vector2(-100f, -100f);
         [SerializeField] private Vector2 maxBounds = new Vector2(100f, 100f);
 
@@ -79,7 +82,6 @@ namespace Reclaim.Input
         {
             if (cameraPivot == null && transform.childCount > 0) cameraPivot = transform.GetChild(0);
             if (targetCamera == null) targetCamera = GetComponentInChildren<Camera>();
-
             if (targetCamera == null) { enabled = false; return; }
 
             _useOrbitCameraMode = cameraPivot == null || targetCamera.transform == transform;
@@ -89,7 +91,6 @@ namespace Reclaim.Input
             _targetYaw = transform.eulerAngles.y;
             _currentYaw = _targetYaw;
 
-            // Inicializa zoom
             float initialZoom = _useOrbitCameraMode ? Mathf.Abs(transform.position.y) : Mathf.Abs(targetCamera.transform.localPosition.z);
             _targetZoomDistance = Mathf.Clamp(initialZoom, minZoomDistance, maxZoomDistance);
             _currentZoomDistance = _targetZoomDistance;
@@ -101,9 +102,8 @@ namespace Reclaim.Input
         private void Update()
         {
             float dt = Time.deltaTime;
-
             ProcessMovement(dt);
-            ProcessRotation(dt); // Agora inclui o cálculo de Auto-Pitch
+            ProcessRotation(dt);
             ProcessZoom(dt);
             ClampTargets();
             ApplySmoothedState(dt);
@@ -113,8 +113,10 @@ namespace Reclaim.Input
         {
             Vector2 keyboardInput = GetMoveInput();
             Vector2 edgeInput = GetEdgeScrollInput();
-            
-            Vector2 desiredPlanarInput = Vector2.ClampMagnitude(keyboardInput + edgeInput, 1f);
+            bool hasKeyboardInput = keyboardInput.sqrMagnitude > 0.0001f;
+
+            Vector2 weightedInput = keyboardInput + (edgeInput * edgeSpeedMultiplier);
+            Vector2 desiredPlanarInput = Vector2.ClampMagnitude(weightedInput, 1f);
 
             Vector3 flatForward = transform.forward;
             flatForward.y = 0f;
@@ -128,25 +130,35 @@ namespace Reclaim.Input
             float speedMultiplier = speedScalesWithZoom ? Mathf.Lerp(minZoomMoveMultiplier, maxZoomMoveMultiplier, zoomT) : 1f;
 
             Vector3 desiredVelocity = (flatRight * desiredPlanarInput.x + flatForward * desiredPlanarInput.y) * moveSensitivity * speedMultiplier;
+            desiredVelocity = ApplyElasticEdgeResistance(desiredVelocity);
 
             float acceleration = desiredVelocity.sqrMagnitude > 0.0001f ? moveAcceleration : moveDeceleration;
-            _currentPlanarVelocity = Vector3.MoveTowards(_currentPlanarVelocity, desiredVelocity, acceleration * deltaTime);
+            if (hasKeyboardInput && desiredVelocity.sqrMagnitude > 0.0001f)
+            {
+                acceleration *= keyboardAccelerationMultiplier;
+            }
 
+            if (_currentPlanarVelocity.sqrMagnitude > 0.0001f && desiredVelocity.sqrMagnitude > 0.0001f)
+            {
+                float alignment = Vector3.Dot(_currentPlanarVelocity.normalized, desiredVelocity.normalized);
+                if (alignment < 0.35f)
+                {
+                    acceleration *= directionChangeBoost;
+                }
+            }
+
+            _currentPlanarVelocity = Vector3.MoveTowards(_currentPlanarVelocity, desiredVelocity, acceleration * deltaTime);
             _targetRigPosition += _currentPlanarVelocity * deltaTime;
         }
 
         private void ProcessRotation(float deltaTime)
         {
-            // Rotação Y (Yaw)
             float yawDelta = 0f;
-            if (enableMiddleMouseOrbit && IsMiddleMouseHeld())
-                yawDelta += GetMouseDelta().x * yawSensitivity * deltaTime;
-            if (enableKeyboardRotation)
-                yawDelta += GetKeyboardYawInput() * keyboardYawSensitivity * deltaTime;
+            if (enableMiddleMouseOrbit && IsMiddleMouseHeld()) yawDelta += GetMouseDelta().x * yawSensitivity * deltaTime;
+            if (enableKeyboardRotation) yawDelta += GetKeyboardYawInput() * keyboardYawSensitivity * deltaTime;
 
             _targetYaw += yawDelta;
 
-            // LÓGICA DE AUTO-PITCH: A inclinação depende do Zoom
             float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
             _targetPitch = Mathf.Lerp(minPitch, maxPitch, zoomT);
         }
@@ -154,15 +166,14 @@ namespace Reclaim.Input
         private void ProcessZoom(float deltaTime)
         {
             float scrollDelta = GetScrollDeltaNormalized();
-            if (Mathf.Approximately(scrollDelta, 0f))
-                _zoomSpeed = Mathf.MoveTowards(_zoomSpeed, 0f, zoomDeceleration * deltaTime);
-            else
-                _zoomSpeed += scrollDelta * zoomAcceleration;
+            if (Mathf.Approximately(scrollDelta, 0f)) _zoomSpeed = Mathf.MoveTowards(_zoomSpeed, 0f, zoomDeceleration * deltaTime);
+            else _zoomSpeed += scrollDelta * zoomAcceleration;
+
+            _zoomSpeed = Mathf.Clamp(_zoomSpeed, -maxZoomSpeed, maxZoomSpeed);
 
             _targetZoomDistance -= _zoomSpeed * zoomSensitivity;
             _targetZoomDistance = Mathf.Clamp(_targetZoomDistance, minZoomDistance, maxZoomDistance);
 
-            // Zoom na direção do mouse (Efeito Manor Lords)
             if (zoomTowardMouse && !Mathf.Approximately(scrollDelta, 0f) && TryGetMouseGroundPoint(out Vector3 mouseGroundPoint))
             {
                 Vector3 towardMouse = mouseGroundPoint - _targetRigPosition;
@@ -174,10 +185,7 @@ namespace Reclaim.Input
 
         private void ApplySmoothedState(float deltaTime)
         {
-            // Suavização Exponencial para posição (mais fluida que Lerp simples)
             _currentRigPosition = Vector3.Lerp(_currentRigPosition, _targetRigPosition, 1f - Mathf.Exp(-12f * deltaTime));
-
-            // Suavização das rotações
             _currentYaw = Mathf.SmoothDampAngle(_currentYaw, _targetYaw, ref _yawVelocity, rotationSmoothTime);
             _currentPitch = Mathf.SmoothDampAngle(_currentPitch, _targetPitch, ref _pitchVelocity, rotationSmoothTime);
             _currentZoomDistance = Mathf.SmoothDamp(_currentZoomDistance, _targetZoomDistance, ref _zoomDistanceVelocity, zoomSmoothTime);
@@ -190,14 +198,10 @@ namespace Reclaim.Input
             }
             else
             {
-                // Aplica no Rig (Movimento e Yaw)
                 transform.position = _currentRigPosition;
                 transform.rotation = Quaternion.Euler(0f, _currentYaw, 0f);
-                
-                // Aplica no Pivot (Pitch dinâmico)
                 cameraPivot.localRotation = Quaternion.Euler(_currentPitch, 0f, 0f);
 
-                // Aplica na Câmera (Zoom)
                 Vector3 localCamPos = targetCamera.transform.localPosition;
                 localCamPos.z = -_currentZoomDistance;
                 targetCamera.transform.localPosition = localCamPos;
@@ -206,22 +210,98 @@ namespace Reclaim.Input
 
         private void ClampTargets()
         {
-            if (useMapBounds)
+            if (!useMapBounds)
             {
-                _targetRigPosition.x = Mathf.Clamp(_targetRigPosition.x, minBounds.x, maxBounds.x);
-                _targetRigPosition.z = Mathf.Clamp(_targetRigPosition.z, minBounds.y, maxBounds.y);
+                return;
+            }
+
+            GetEffectiveBounds(out float minX, out float maxX, out float minZ, out float maxZ);
+            _targetRigPosition.x = Mathf.Clamp(_targetRigPosition.x, minX, maxX);
+            _targetRigPosition.z = Mathf.Clamp(_targetRigPosition.z, minZ, maxZ);
+        }
+
+        private Vector3 ApplyElasticEdgeResistance(Vector3 desiredVelocity)
+        {
+            if (!useMapBounds || !useElasticEdgeResistance)
+            {
+                return desiredVelocity;
+            }
+
+            GetEffectiveBounds(out float minX, out float maxX, out float minZ, out float maxZ);
+
+            float xFactor = GetAxisEdgeResistanceFactor(_targetRigPosition.x, minX, maxX);
+            float zFactor = GetAxisEdgeResistanceFactor(_targetRigPosition.z, minZ, maxZ);
+            float factor = Mathf.Min(xFactor, zFactor);
+
+            return desiredVelocity * factor;
+        }
+
+        private float GetAxisEdgeResistanceFactor(float value, float min, float max)
+        {
+            if (max <= min)
+            {
+                return minEdgeSpeedFactor;
+            }
+
+            float distanceToMin = value - min;
+            float distanceToMax = max - value;
+            float nearest = Mathf.Min(distanceToMin, distanceToMax);
+
+            if (nearest <= 0f)
+            {
+                return minEdgeSpeedFactor;
+            }
+
+            if (nearest >= edgeResistanceDistance || edgeResistanceDistance <= 0f)
+            {
+                return 1f;
+            }
+
+            float t = Mathf.Clamp01(nearest / edgeResistanceDistance);
+            return Mathf.Lerp(minEdgeSpeedFactor, 1f, t);
+        }
+
+        private void GetEffectiveBounds(out float minX, out float maxX, out float minZ, out float maxZ)
+        {
+            minX = minBounds.x;
+            maxX = maxBounds.x;
+            minZ = minBounds.y;
+            maxZ = maxBounds.y;
+
+            if (keepCameraViewInsideBounds && TryGetGroundViewExtents(out float halfWidth, out float halfHeight))
+            {
+                minX += halfWidth + cameraViewEdgePadding;
+                maxX -= halfWidth + cameraViewEdgePadding;
+                minZ += halfHeight + cameraViewEdgePadding;
+                maxZ -= halfHeight + cameraViewEdgePadding;
+            }
+
+            if (minX > maxX)
+            {
+                float centerX = (minBounds.x + maxBounds.x) * 0.5f;
+                minX = centerX;
+                maxX = centerX;
+            }
+
+            if (minZ > maxZ)
+            {
+                float centerZ = (minBounds.y + maxBounds.y) * 0.5f;
+                minZ = centerZ;
+                maxZ = centerZ;
             }
         }
 
-        // --- HELPERS DE INPUT ---
         private Vector2 GetMoveInput()
         {
             Vector2 res = Vector2.zero;
 #if ENABLE_INPUT_SYSTEM
             var k = Keyboard.current;
-            if (k != null) {
-                if (k.wKey.isPressed) res.y += 1; if (k.sKey.isPressed) res.y -= 1;
-                if (k.dKey.isPressed) res.x += 1; if (k.aKey.isPressed) res.x -= 1;
+            if (k != null)
+            {
+                if (k.wKey.isPressed) res.y += 1;
+                if (k.sKey.isPressed) res.y -= 1;
+                if (k.dKey.isPressed) res.x += 1;
+                if (k.aKey.isPressed) res.x -= 1;
             }
 #else
             res.x = UnityEngine.Input.GetAxisRaw("Horizontal");
@@ -243,14 +323,29 @@ namespace Reclaim.Input
         {
             Vector2 mouse = GetMousePosition();
             Vector2 res = Vector2.zero;
-            if (mouse.x >= Screen.width - edgeSizePixels) res.x = 1;
-            else if (mouse.x <= edgeSizePixels) res.x = -1;
-            if (mouse.y >= Screen.height - edgeSizePixels) res.y = 1;
-            else if (mouse.y <= edgeSizePixels) res.y = -1;
+
+            float left = GetEdgeFactor(mouse.x, edgeSizePixels);
+            float right = GetEdgeFactor(Screen.width - mouse.x, edgeSizePixels);
+            float bottom = GetEdgeFactor(mouse.y, edgeSizePixels);
+            float top = GetEdgeFactor(Screen.height - mouse.y, edgeSizePixels);
+
+            res.x = right - left;
+            res.y = top - bottom;
             return res * (edgeScrollSensitivity / moveSensitivity);
         }
 
-        private Vector2 GetMousePosition() => 
+        private float GetEdgeFactor(float distanceToEdge, float threshold)
+        {
+            if (threshold <= 0f || distanceToEdge > threshold)
+            {
+                return 0f;
+            }
+
+            float t = 1f - Mathf.Clamp01(distanceToEdge / threshold);
+            return Mathf.Pow(t, edgeRampExponent);
+        }
+
+        private Vector2 GetMousePosition() =>
 #if ENABLE_INPUT_SYSTEM
             Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 #else
@@ -271,12 +366,13 @@ namespace Reclaim.Input
             UnityEngine.Input.GetMouseButton(2);
 #endif
 
-        private float GetKeyboardYawInput() {
+        private float GetKeyboardYawInput()
+        {
 #if ENABLE_INPUT_SYSTEM
             var k = Keyboard.current;
             return k != null ? (k.qKey.isPressed ? -1 : (k.eKey.isPressed ? 1 : 0)) : 0;
 #else
-            return (UnityEngine.Input.GetKey(KeyCode.Q) ? -1 : (UnityEngine.Input.GetKey(KeyCode.E) ? 1 : 0));
+            return UnityEngine.Input.GetKey(KeyCode.Q) ? -1 : (UnityEngine.Input.GetKey(KeyCode.E) ? 1 : 0);
 #endif
         }
 
@@ -284,23 +380,77 @@ namespace Reclaim.Input
         {
             point = Vector3.zero;
             Ray ray = targetCamera.ScreenPointToRay(GetMousePosition());
-            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundRaycastMask)) {
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundRaycastMask))
+            {
                 point = hit.point;
                 return true;
             }
             return false;
         }
 
-        private void ResolveTerrainReference() { if (mapTerrain == null) mapTerrain = FindFirstObjectByType<Terrain>(); }
+        private void ResolveTerrainReference()
+        {
+            if (mapTerrain == null) mapTerrain = FindFirstObjectByType<Terrain>();
+        }
 
         private void RefreshBoundsFromSurface()
         {
-            if (autoBoundsFromTerrain && mapTerrain != null) {
+            if (autoBoundsFromTerrain && mapTerrain != null)
+            {
                 Vector3 pos = mapTerrain.transform.position;
                 Vector3 size = mapTerrain.terrainData.size;
                 minBounds = new Vector2(pos.x + boundsPadding, pos.z + boundsPadding);
                 maxBounds = new Vector2(pos.x + size.x - boundsPadding, pos.z + size.z - boundsPadding);
             }
+        }
+
+        private bool TryGetGroundViewExtents(out float halfWidth, out float halfHeight)
+        {
+            halfWidth = 0f;
+            halfHeight = 0f;
+            if (targetCamera == null)
+            {
+                return false;
+            }
+
+            Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, fallbackGroundHeight, 0f));
+            Vector3[] hits = new Vector3[4];
+            Vector2[] corners =
+            {
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f)
+            };
+
+            for (int i = 0; i < corners.Length; i++)
+            {
+                Ray ray = targetCamera.ViewportPointToRay(new Vector3(corners[i].x, corners[i].y, 0f));
+                if (!groundPlane.Raycast(ray, out float enter))
+                {
+                    return false;
+                }
+
+                hits[i] = ray.GetPoint(enter);
+            }
+
+            float minX = hits[0].x;
+            float maxX = hits[0].x;
+            float minZ = hits[0].z;
+            float maxZ = hits[0].z;
+
+            for (int i = 1; i < hits.Length; i++)
+            {
+                Vector3 p = hits[i];
+                minX = Mathf.Min(minX, p.x);
+                maxX = Mathf.Max(maxX, p.x);
+                minZ = Mathf.Min(minZ, p.z);
+                maxZ = Mathf.Max(maxZ, p.z);
+            }
+
+            halfWidth = (maxX - minX) * 0.5f;
+            halfHeight = (maxZ - minZ) * 0.5f;
+            return true;
         }
     }
 }

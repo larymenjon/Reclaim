@@ -143,10 +143,59 @@ namespace Reclaim.UI
             RefreshHud();
         }
 
+        public bool TrySpendWood(int amount)
+        {
+            if (amount <= 0)
+            {
+                return true;
+            }
+
+            if (Wood < amount)
+            {
+                return false;
+            }
+
+            Wood -= amount;
+            RefreshHud();
+            return true;
+        }
+
         public void AddScrap(int amount)
         {
             Scrap = Mathf.Max(0, Scrap + amount);
             RefreshHud();
+        }
+
+        public bool TrySpendScrap(int amount)
+        {
+            if (amount <= 0)
+            {
+                return true;
+            }
+
+            if (Scrap < amount)
+            {
+                return false;
+            }
+
+            Scrap -= amount;
+            RefreshHud();
+            return true;
+        }
+
+        public bool TrySpendBuildingCost(int woodCost, int scrapCost)
+        {
+            int clampedWood = Mathf.Max(0, woodCost);
+            int clampedScrap = Mathf.Max(0, scrapCost);
+            if (Wood < clampedWood || Scrap < clampedScrap)
+            {
+                return false;
+            }
+
+            Wood -= clampedWood;
+            Scrap -= clampedScrap;
+            RefreshHud();
+            return true;
         }
 
         public void AddHouses(int amount)
@@ -282,18 +331,8 @@ namespace Reclaim.UI
             // Nome da cidade
             if (cidadeText != null) cidadeText.text = GetCityName();
 
-            // População com cálculo de casas (-3)
-            int housesNeeded = Mathf.CeilToInt(Families / 3f);
-            int housesAvailable = Houses;
-            int houseDeficit = Mathf.Max(0, housesNeeded - housesAvailable);
-            
-            if (populacaoText != null) 
-            {
-                if (houseDeficit > 0)
-                    populacaoText.text = $"{Families} (-{houseDeficit})";
-                else
-                    populacaoText.text = $"{Families}";
-            }
+            // Valores sem d�ficit visual
+            if (populacaoText != null) populacaoText.text = $"{Families}";
 
             // Recursos
             if (comidaText != null) comidaText.text = $"{FoodMonths:0.#}";
@@ -308,7 +347,6 @@ namespace Reclaim.UI
             if (municaoText != null) municaoText.text = $"{AmmoMonths:0.#}";
             if (defesaText != null) defesaText.text = $"{DefensePercent:0.#}%";
         }
-
         private string GetCityName()
         {
             // Tenta obter o nome da cidade do NewGameSetupManager
@@ -323,3 +361,5 @@ namespace Reclaim.UI
         }
     }
 }
+
+

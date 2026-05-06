@@ -24,6 +24,7 @@ namespace Reclaim
         [Header("Startup")]
         [SerializeField] private GameMode startMode = GameMode.None;
         [SerializeField] private BuildingData defaultBuilding;
+        [SerializeField] private bool selectDefaultBuildingOnStart = false;
 
         public event Action<GameMode> OnModeChanged;
 
@@ -47,7 +48,7 @@ namespace Reclaim
         {
             SetMode(startMode);
 
-            if (defaultBuilding != null)
+            if (selectDefaultBuildingOnStart && defaultBuilding != null)
             {
                 buildingSystem.SelectBuilding(defaultBuilding);
             }

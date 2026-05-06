@@ -14,9 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
   id: House2
   displayName: House 2
-  prefab: {fileID: 2496965646034755173, guid: a01dd04aa6d1d7343b2d576c0ec89f24, type: 3}
+  prefab: {fileID: 1410068957854387501, guid: 0304cced50feff84a8db12bd03d1cf6a, type: 3}
   size: {x: 2, y: 2}
   canRotate: 1
+  countsAsHouse: 0
   description: Sem descricao.
   woodCost: 40
   scrapCost: 25
+  constructionDurationSeconds: 10
+  foundationStagePrefab: {fileID: 0}
+  midStagePrefab: {fileID: 0}
+  completedStagePrefab: {fileID: 1410068957854387501, guid: 0304cced50feff84a8db12bd03d1cf6a, type: 3}
+  allowGardenPlotSelection: 0
+  defaultGardenPlotSize: {x: 2, y: 2}

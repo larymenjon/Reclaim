@@ -4,6 +4,7 @@ using Reclaim;
 using Reclaim.Core;
 using Reclaim.Grid;
 using Reclaim.Input;
+using Reclaim.UI;
 using UnityEngine;
 
 namespace Reclaim.Building
@@ -17,6 +18,7 @@ namespace Reclaim.Building
         private PreviewSystem _previewSystem;
         private GameManager _gameManager;
         private PlacementHistory _history;
+        private TopHeaderHudController _topHud;
 
         private BuildingData _selectedBuilding;
         private int _rotationSteps;
@@ -36,6 +38,7 @@ namespace Reclaim.Building
             _previewSystem = previewSystem;
             _gameManager = gameManager;
             _history = history;
+            _topHud = FindFirstObjectByType<TopHeaderHudController>();
 
             inputHandler.OnPointerMoved += HandlePointerMoved;
             inputHandler.OnPrimaryPressed += HandlePrimaryPressed;
@@ -56,7 +59,14 @@ namespace Reclaim.Building
                 return;
             }
 
-            _previewSystem.SetPreviewPrefab(_selectedBuilding.Prefab);
+            if (!TryGetSelectedPrefab(out GameObject prefab))
+            {
+                _selectedBuilding = null;
+                _previewSystem.ClearPreview();
+                return;
+            }
+
+            _previewSystem.SetPreviewPrefab(prefab);
             _previewSystem.SetVisible(true);
         }
 
@@ -86,7 +96,7 @@ namespace Reclaim.Building
             _hasHover = true;
         }
 
-        private void HandlePrimaryPressed(GridCoordinate coordinate, Vector3 _)
+        private void HandlePrimaryPressed(GridCoordinate coordinate, Vector3 worldPoint)
         {
             if (_gameManager.CurrentMode != GameMode.Build || _selectedBuilding == null)
             {
@@ -102,22 +112,49 @@ namespace Reclaim.Building
             Vector3 worldPosition = _gridManager.GetFootprintCenterWorld(coordinate, _selectedBuilding.Size, _rotationSteps);
             Quaternion rotation = Quaternion.Euler(0f, _rotationSteps * 90f, 0f);
 
-            GameObject instance = Instantiate(_selectedBuilding.Prefab, worldPosition, rotation);
-            Building building = instance.GetComponent<Building>();
-            if (building == null)
+            if (!TryGetSelectedPrefab(out GameObject ignoredPrefab))
             {
-                building = instance.AddComponent<Building>();
+                _previewSystem.ClearPreview();
+                return;
             }
 
-            building.Initialize(_selectedBuilding, coordinate, _rotationSteps, cells);
-            _gridManager.SetOccupancy(cells, OccupancyType.Building, instance);
+            BuildingData placedData = _selectedBuilding;
+
+            if (_topHud != null && !_topHud.TrySpendBuildingCost(placedData.WoodCost, placedData.ScrapCost))
+            {
+                Debug.Log($"Not enough resources to build '{placedData.DisplayName}'. Need Wood {placedData.WoodCost}, Scrap {placedData.ScrapCost}.");
+                return;
+            }
+
+            GameObject root = new GameObject($"{placedData.DisplayName}_Building");
+            root.transform.SetPositionAndRotation(worldPosition, rotation);
+            Building building = root.GetComponent<Building>();
+            if (building == null)
+            {
+                building = root.AddComponent<Building>();
+            }
+
+            building.Initialize(placedData, coordinate, _rotationSteps, cells);
+            building.OnConstructionCompleted += HandleBuildingCompleted;
+            _gridManager.SetOccupancy(cells, OccupancyType.Building, root);
 
             _history.Record(() =>
             {
-                _gridManager.ClearOccupancy(cells, instance);
-                if (instance != null)
+                bool wasCompleted = root != null && building != null && building.IsConstructionComplete;
+                _gridManager.ClearOccupancy(cells, root);
+                if (root != null)
                 {
-                    Destroy(instance);
+                    Destroy(root);
+                }
+
+                if (_topHud != null)
+                {
+                    _topHud.AddWood(placedData != null ? placedData.WoodCost : 0);
+                    _topHud.AddScrap(placedData != null ? placedData.ScrapCost : 0);
+                    if (wasCompleted && placedData != null && placedData.CountsAsHouse)
+                    {
+                        _topHud.AddHouses(-1);
+                    }
                 }
             });
         }
@@ -156,8 +193,70 @@ namespace Reclaim.Building
 
             if (_selectedBuilding != null)
             {
-                _previewSystem.SetPreviewPrefab(_selectedBuilding.Prefab);
+                if (!TryGetSelectedPrefab(out GameObject prefab))
+                {
+                    _selectedBuilding = null;
+                    _previewSystem.ClearPreview();
+                    return;
+                }
+
+                _previewSystem.SetPreviewPrefab(prefab);
                 _previewSystem.SetVisible(true);
+            }
+        }
+
+        private bool TryGetSelectedPrefab(out GameObject prefab)
+        {
+            prefab = null;
+            if (_selectedBuilding == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                prefab = _selectedBuilding.Prefab;
+            }
+            catch (MissingReferenceException)
+            {
+                Debug.LogError(
+                    $"BuildingData '{_selectedBuilding.name}' has a missing prefab reference. Reassign the prefab in the inspector.",
+                    _selectedBuilding);
+                return false;
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogError(
+                    $"BuildingData '{_selectedBuilding.name}' has no prefab assigned. Assign a prefab in the inspector.",
+                    _selectedBuilding);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void HandleBuildingCompleted(Building building)
+        {
+            if (building == null || building.Data == null)
+            {
+                return;
+            }
+
+            if (_topHud != null && building.Data.CountsAsHouse)
+            {
+                _topHud.AddHouses(1);
+            }
+
+            if (building.Data.AllowGardenPlotSelection)
+            {
+                HouseGardenPlotSelector selector = building.GetComponent<HouseGardenPlotSelector>();
+                if (selector == null)
+                {
+                    selector = building.gameObject.AddComponent<HouseGardenPlotSelector>();
+                }
+
+                selector.BeginSelection(building.Data.DefaultGardenPlotSize);
             }
         }
     }

@@ -12,11 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16f8fae51582feb4d9dd7c070038e6ea, type: 3}
   m_Name: Industry
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
-  id: building
-  displayName: New Building
-  prefab: {fileID: 0}
-  size: {x: 1, y: 1}
+  id: Industry
+  displayName: Industry
+  prefab: {fileID: 8134591842676434707, guid: 9984ad3dfd58ac64c9fa980d6b96a6ed, type: 3}
+  size: {x: 2, y: 2}
   canRotate: 1
+  countsAsHouse: 0
   description: Sem descricao.
-  woodCost: 10
-  scrapCost: 0
+  woodCost: 20
+  scrapCost: 15
+  constructionDurationSeconds: 10
+  foundationStagePrefab: {fileID: 0}
+  midStagePrefab: {fileID: 0}
+  completedStagePrefab: {fileID: 8134591842676434707, guid: 9984ad3dfd58ac64c9fa980d6b96a6ed, type: 3}
+  allowGardenPlotSelection: 0
+  defaultGardenPlotSize: {x: 2, y: 2}

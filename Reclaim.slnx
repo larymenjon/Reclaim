@@ -1,5 +1,8 @@
 ﻿<Solution>
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Veridian.BuildingBuilder.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Veridian.BuildingBuilder.Core.csproj" />
+  <Project Path="Veridian.BuildingBuilder.Components.csproj" />
   <Project Path="sc.skyboxes.demo.runtime.csproj" />
 </Solution>

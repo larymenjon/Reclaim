@@ -12,11 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16f8fae51582feb4d9dd7c070038e6ea, type: 3}
   m_Name: Storage
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
-  id: building
-  displayName: New Building
-  prefab: {fileID: 0}
-  size: {x: 1, y: 1}
+  id: Storage
+  displayName: Storage
+  prefab: {fileID: 2669750991304649183, guid: 558c214a1c30e2240bd69a3b7f7367fb, type: 3}
+  size: {x: 2, y: 2}
   canRotate: 1
+  countsAsHouse: 0
   description: Sem descricao.
   woodCost: 10
-  scrapCost: 0
+  scrapCost: 5
+  constructionDurationSeconds: 10
+  foundationStagePrefab: {fileID: 0}
+  midStagePrefab: {fileID: 0}
+  completedStagePrefab: {fileID: 2669750991304649183, guid: 558c214a1c30e2240bd69a3b7f7367fb, type: 3}
+  allowGardenPlotSelection: 0
+  defaultGardenPlotSize: {x: 2, y: 2}
