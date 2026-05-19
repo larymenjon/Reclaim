@@ -49,6 +49,10 @@ namespace Reclaim.Grid
 
         public void InitializeGrid()
         {
+            gridWidth = Mathf.Max(1, gridWidth);
+            gridHeight = Mathf.Max(1, gridHeight);
+            cellSize = Mathf.Max(0.001f, cellSize);
+
             _cells = new GridCellData[gridWidth, gridHeight];
 
             for (int x = 0; x < gridWidth; x++)
@@ -69,6 +73,11 @@ namespace Reclaim.Grid
         public bool TryGetCell(GridCoordinate coordinate, out GridCellData cell)
         {
             cell = null;
+            if (_cells == null)
+            {
+                InitializeGrid();
+            }
+
             if (!IsInsideGrid(coordinate))
             {
                 return false;
@@ -80,6 +89,12 @@ namespace Reclaim.Grid
 
         public bool TryWorldToGrid(Vector3 worldPosition, out GridCoordinate coordinate)
         {
+            if (cellSize <= 0f)
+            {
+                coordinate = default;
+                return false;
+            }
+
             Vector3 relative = worldPosition - gridOrigin;
 
             int x = Mathf.FloorToInt(relative.x / cellSize);

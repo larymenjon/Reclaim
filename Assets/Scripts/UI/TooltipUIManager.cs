@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 namespace Reclaim.UI
@@ -22,7 +22,7 @@ namespace Reclaim.UI
         private RectTransform _tooltipRect;
         private RectTransform _canvasRect;
         private Canvas _canvas;
-        private Camera _uiCamera;
+        private UnityEngine.Camera _uiCamera;
         private RectTransform _trackedTarget;
         private Vector3 _anchorScreenPosition;
         private bool _followMouse;
@@ -195,3 +195,4 @@ namespace Reclaim.UI
         }
     }
 }
+

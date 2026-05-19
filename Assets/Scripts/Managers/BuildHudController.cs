@@ -86,6 +86,12 @@ namespace Reclaim.Managers
             gameManager.EnterBuildMode(buildingData);
         }
 
+        // UnityEvent-safe overload for buttons configured with Object arguments.
+        public void SelectBuildingTool(UnityEngine.Object buildingAsset)
+        {
+            SelectBuildingTool(buildingAsset as BuildingData);
+        }
+
         public void SelectIdleTool()
         {
             if (gameManager == null)

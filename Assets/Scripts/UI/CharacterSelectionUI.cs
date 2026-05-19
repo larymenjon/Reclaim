@@ -97,11 +97,11 @@ namespace Reclaim.UI
             if (allLeaders == null || allLeaders.Length == 0) return;
 
             LeaderData selected = allLeaders[currentIndex];
-            if(nameText) nameText.text = selected.leaderName;
-            if(subDescriptionText) subDescriptionText.text = selected.subDescription;
-            if(descriptionText) descriptionText.text = selected.description;
-            if(phraseText) phraseText.text = $"\"{selected.catchphrase}\"";
-            if(bigDisplayPortrait) bigDisplayPortrait.sprite = selected.portrait;
+            if(nameText) nameText.text = selected.LeaderName;
+            if(subDescriptionText) subDescriptionText.text = selected.SubDescription;
+            if(descriptionText) descriptionText.text = selected.Description;
+            if(phraseText) phraseText.text = $"\"{selected.Catchphrase}\"";
+            if(bigDisplayPortrait) bigDisplayPortrait.sprite = selected.Portrait;
             if(iconImage)
             {
                 Sprite selectedIcon = (icon != null && currentIndex < icon.Length) ? icon[currentIndex] : null;
@@ -114,3 +114,4 @@ namespace Reclaim.UI
         }
     }
 }
+

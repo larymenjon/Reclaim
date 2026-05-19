@@ -36,7 +36,7 @@ namespace Reclaim.UI
 
             Vector3 position = followMouse ? (Vector3)eventData.position : transform.position;
             string text = BuildTooltipText();
-            Sprite image = tooltipData != null ? tooltipData.previewImage : null;
+            Sprite image = tooltipData != null ? tooltipData.PreviewImage : null;
             TooltipUIManager.Instance.ShowTooltip(image, text, position);
         }
 
@@ -55,12 +55,12 @@ namespace Reclaim.UI
                 return string.Empty;
             }
 
-            if (!string.IsNullOrWhiteSpace(tooltipData.description))
+            if (!string.IsNullOrWhiteSpace(tooltipData.Description))
             {
-                return tooltipData.description;
+                return tooltipData.Description;
             }
 
-            return tooltipData.mapName ?? string.Empty;
+            return tooltipData.MapName ?? string.Empty;
         }
     }
 }

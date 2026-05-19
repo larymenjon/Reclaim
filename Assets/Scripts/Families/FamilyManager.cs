@@ -10,8 +10,11 @@ namespace Reclaim.Survival.Families
         [Serializable]
         public struct StartingFamilyGroup
         {
-            public FamilyPresetData preset;
-            public int count;
+            [SerializeField] private FamilyPresetData preset;
+            [SerializeField] private int count;
+
+            public FamilyPresetData Preset => preset;
+            public int Count => count;
         }
 
         [SerializeField] private List<StartingFamilyGroup> startingFamilies = new List<StartingFamilyGroup>();
@@ -202,14 +205,14 @@ namespace Reclaim.Survival.Families
             for (int i = 0; i < startingFamilies.Count; i++)
             {
                 StartingFamilyGroup group = startingFamilies[i];
-                if (group.preset == null || group.count <= 0)
+                if (group.Preset == null || group.Count <= 0)
                 {
                     continue;
                 }
 
-                for (int j = 0; j < group.count; j++)
+                for (int j = 0; j < group.Count; j++)
                 {
-                    AddFamily(group.preset);
+                    AddFamily(group.Preset);
                 }
             }
 

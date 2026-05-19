@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -33,6 +33,7 @@ namespace Reclaim.Flow
 
         private bool isTransitioning;
         private bool videoEnded;
+        private bool isVideoHooked;
 
         private void Start()
         {
@@ -90,7 +91,7 @@ namespace Reclaim.Flow
         {
             videoEnded = false;
             bool playbackStarted = false;
-            introVideoPlayer.loopPointReached += HandleVideoEnded;
+            HookVideoEndEvent();
             introVideoPlayer.Prepare();
 
             while (!introVideoPlayer.isPrepared && !isTransitioning)
@@ -100,7 +101,7 @@ namespace Reclaim.Flow
 
             if (isTransitioning)
             {
-                introVideoPlayer.loopPointReached -= HandleVideoEnded;
+                UnhookVideoEndEvent();
                 yield break;
             }
 
@@ -125,7 +126,7 @@ namespace Reclaim.Flow
                 yield return WaitForSecondsSafe(fallbackVideoDurationSeconds);
             }
 
-            introVideoPlayer.loopPointReached -= HandleVideoEnded;
+            UnhookVideoEndEvent();
         }
 
         private void ResolveVideoPlayer()
@@ -150,7 +151,7 @@ namespace Reclaim.Flow
 
             if (introVideoPlayer.renderMode == VideoRenderMode.APIOnly)
             {
-                Camera mainCamera = Camera.main;
+                UnityEngine.Camera mainCamera = UnityEngine.Camera.main;
                 if (mainCamera != null)
                 {
                     introVideoPlayer.renderMode = VideoRenderMode.CameraFarPlane;
@@ -178,6 +179,33 @@ namespace Reclaim.Flow
         private object WaitForSecondsSafe(float seconds)
         {
             return useUnscaledTime ? new WaitForSecondsRealtime(seconds) : new WaitForSeconds(seconds);
+        }
+
+        private void OnDestroy()
+        {
+            UnhookVideoEndEvent();
+        }
+
+        private void HookVideoEndEvent()
+        {
+            if (introVideoPlayer == null || isVideoHooked)
+            {
+                return;
+            }
+
+            introVideoPlayer.loopPointReached += HandleVideoEnded;
+            isVideoHooked = true;
+        }
+
+        private void UnhookVideoEndEvent()
+        {
+            if (introVideoPlayer == null || !isVideoHooked)
+            {
+                return;
+            }
+
+            introVideoPlayer.loopPointReached -= HandleVideoEnded;
+            isVideoHooked = false;
         }
 
         private void LoadMenu()
@@ -210,3 +238,4 @@ namespace Reclaim.Flow
         }
     }
 }
+

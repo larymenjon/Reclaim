@@ -22,6 +22,8 @@ namespace Reclaim.UI.Bottom
         private void Awake()
         {
             _button = GetComponent<Button>();
+            // Prevent broken persistent OnClick bindings (wrong argument types) from crashing at runtime.
+            _button.onClick.RemoveAllListeners();
             _button.onClick.AddListener(HandleClick);
 
             if (buildHudController == null)

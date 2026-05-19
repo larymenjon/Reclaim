@@ -9,21 +9,32 @@ namespace Reclaim.Survival.Events
     [Serializable]
     public struct EventResourceDelta
     {
-        public ResourceType resourceType;
-        public float amount;
+        [SerializeField] private ResourceType resourceType;
+        [SerializeField] private float amount;
+
+        public ResourceType ResourceType => resourceType;
+        public float Amount => amount;
     }
 
     [Serializable]
     public struct EventFamilyImpact
     {
         [Tooltip("If <= 0, impact all families.")]
-        public int affectedFamilies;
-        public int memberDelta;
-        [Range(-100f, 100f)] public float hungerDelta;
-        [Range(-100f, 100f)] public float healthDelta;
-        [Range(-100f, 100f)] public float moraleDelta;
-        [Range(0f, 1f)] public float sicknessChance;
-        [Range(0f, 1f)] public float cureChance;
+        [SerializeField] private int affectedFamilies;
+        [SerializeField] private int memberDelta;
+        [SerializeField, Range(-100f, 100f)] private float hungerDelta;
+        [SerializeField, Range(-100f, 100f)] private float healthDelta;
+        [SerializeField, Range(-100f, 100f)] private float moraleDelta;
+        [SerializeField, Range(0f, 1f)] private float sicknessChance;
+        [SerializeField, Range(0f, 1f)] private float cureChance;
+
+        public int AffectedFamilies => affectedFamilies;
+        public int MemberDelta => memberDelta;
+        public float HungerDelta => hungerDelta;
+        public float HealthDelta => healthDelta;
+        public float MoraleDelta => moraleDelta;
+        public float SicknessChance => sicknessChance;
+        public float CureChance => cureChance;
     }
 
     [Serializable]

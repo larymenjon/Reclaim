@@ -11,20 +11,17 @@ namespace Reclaim.UI
     {
         private void Awake()
         {
-            // Find all BottomHudHoverLift components
-            BottomHudHoverLift[] allHoverLifts = FindObjectsOfType<BottomHudHoverLift>();
-            
-            // Disable each one
+            BottomHudHoverLift[] allHoverLifts =
+                FindObjectsByType<BottomHudHoverLift>(FindObjectsSortMode.None);
+
             int disabledCount = 0;
             foreach (BottomHudHoverLift hoverLift in allHoverLifts)
             {
                 hoverLift.enabled = false;
                 disabledCount++;
             }
-            
-            Debug.Log($"✅ Disabled {disabledCount} BottomHudHoverLift components");
-            
-            // Destroy this component after it's done
+
+            Debug.Log($"Disabled {disabledCount} BottomHudHoverLift components.");
             Destroy(this);
         }
     }

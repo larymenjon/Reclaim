@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Reclaim.Grid;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -14,7 +14,7 @@ namespace Reclaim.Input
     public class InputHandler : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private Camera inputCamera;
+        [SerializeField] private UnityEngine.Camera inputCamera;
         [SerializeField] private GridManager gridManager;
 
         [Header("Raycast")]
@@ -36,7 +36,7 @@ namespace Reclaim.Input
         {
             if (inputCamera == null)
             {
-                inputCamera = Camera.main;
+                inputCamera = UnityEngine.Camera.main;
             }
         }
 
@@ -256,3 +256,4 @@ namespace Reclaim.Input
         }
     }
 }
+

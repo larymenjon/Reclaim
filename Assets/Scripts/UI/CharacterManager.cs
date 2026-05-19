@@ -6,7 +6,9 @@ namespace Reclaim.UI
     [CreateAssetMenu(fileName = "CharacterManager", menuName = "Reclaim/Character Manager")]
     public class CharacterManager : ScriptableObject
     {
-        public CharacterData[] characters;
+        [SerializeField] private CharacterData[] characters;
+
+        public CharacterData[] Characters => characters;
 
         [Serializable]
         public class CharacterData

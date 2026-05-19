@@ -89,6 +89,12 @@ namespace Reclaim.Survival.Events
                 return false;
             }
 
+            if (_resourceManager == null || _familyManager == null || _moraleSystem == null)
+            {
+                Debug.LogError("EventManager is not initialized. Call Initialize before resolving events.");
+                return false;
+            }
+
             ActiveEvent active = _activeEvent.Value;
             if (active.Data.Choices == null || choiceIndex < 0 || choiceIndex >= active.Data.Choices.Count)
             {
@@ -152,10 +158,11 @@ namespace Reclaim.Survival.Events
 
         private void ApplyChoice(EventChoice choice)
         {
-            for (int i = 0; i < choice.ResourceDeltas.Count; i++)
+            IReadOnlyList<EventResourceDelta> resourceDeltas = choice.ResourceDeltas;
+            for (int i = 0; i < resourceDeltas.Count; i++)
             {
-                EventResourceDelta delta = choice.ResourceDeltas[i];
-                _resourceManager.ApplyDelta(delta.resourceType, delta.amount);
+                EventResourceDelta delta = resourceDeltas[i];
+                _resourceManager.ApplyDelta(delta.ResourceType, delta.Amount);
             }
 
             ApplyFamilyImpact(choice.FamilyImpact);
@@ -180,7 +187,7 @@ namespace Reclaim.Survival.Events
             }
 
             List<Family> targets = new List<Family>();
-            if (impact.affectedFamilies <= 0 || impact.affectedFamilies >= _familyManager.FamilyCount)
+            if (impact.AffectedFamilies <= 0 || impact.AffectedFamilies >= _familyManager.FamilyCount)
             {
                 for (int i = 0; i < _familyManager.FamilyCount; i++)
                 {
@@ -190,7 +197,7 @@ namespace Reclaim.Survival.Events
             else
             {
                 HashSet<int> selectedIndices = new HashSet<int>();
-                while (selectedIndices.Count < impact.affectedFamilies && selectedIndices.Count < _familyManager.FamilyCount)
+                while (selectedIndices.Count < impact.AffectedFamilies && selectedIndices.Count < _familyManager.FamilyCount)
                 {
                     selectedIndices.Add(_rng.Next(0, _familyManager.FamilyCount));
                 }
@@ -204,25 +211,25 @@ namespace Reclaim.Survival.Events
             for (int i = 0; i < targets.Count; i++)
             {
                 Family family = targets[i];
-                family.ApplyHunger(impact.hungerDelta);
-                family.ApplyHealth(impact.healthDelta);
-                family.ApplyMorale(impact.moraleDelta);
+                family.ApplyHunger(impact.HungerDelta);
+                family.ApplyHealth(impact.HealthDelta);
+                family.ApplyMorale(impact.MoraleDelta);
 
-                if (impact.memberDelta > 0)
+                if (impact.MemberDelta > 0)
                 {
-                    family.AddMembers(impact.memberDelta);
+                    family.AddMembers(impact.MemberDelta);
                 }
-                else if (impact.memberDelta < 0)
+                else if (impact.MemberDelta < 0)
                 {
-                    family.LoseMembers(-impact.memberDelta);
+                    family.LoseMembers(-impact.MemberDelta);
                 }
 
-                if (impact.sicknessChance > 0f && UnityEngine.Random.value < impact.sicknessChance)
+                if (impact.SicknessChance > 0f && UnityEngine.Random.value < impact.SicknessChance)
                 {
                     family.SetSick(true);
                 }
 
-                if (impact.cureChance > 0f && UnityEngine.Random.value < impact.cureChance)
+                if (impact.CureChance > 0f && UnityEngine.Random.value < impact.CureChance)
                 {
                     family.SetSick(false);
                 }

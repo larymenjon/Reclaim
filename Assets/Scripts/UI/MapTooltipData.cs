@@ -6,10 +6,14 @@ namespace Reclaim.UI
     [Serializable]
     public class MapTooltipData
     {
-        public string mapName;
-        public Sprite previewImage;
+        [SerializeField] private string mapName;
+        [SerializeField] private Sprite previewImage;
 
         [TextArea(2, 6)]
-        public string description;
+        [SerializeField] private string description;
+
+        public string MapName => mapName;
+        public Sprite PreviewImage => previewImage;
+        public string Description => description;
     }
 }

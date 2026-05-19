@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -326,11 +326,11 @@ namespace Reclaim.Flow
             Font runtimeFont = captionFont;
             if (runtimeFont == null)
             {
-                runtimeFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                runtimeFont = UnityEngine.Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
             if (runtimeFont == null)
             {
-                runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                runtimeFont = UnityEngine.Resources.GetBuiltinResource<Font>("Arial.ttf");
             }
             text.font = runtimeFont;
             text.alignment = TextAnchor.MiddleCenter;
@@ -423,7 +423,7 @@ namespace Reclaim.Flow
         [SerializeField, Range(0.1f, 1f)] private float startFovMultiplier = 0.45f;
         [SerializeField] private bool useUnscaledTime = true;
 
-        private Camera targetCamera;
+        private UnityEngine.Camera targetCamera;
         private Image overlayImage;
         private Canvas overlayCanvas;
         private float targetFieldOfView;
@@ -442,7 +442,7 @@ namespace Reclaim.Flow
                 return;
             }
 
-            Camera camera = Camera.main ?? FindFirstObjectByType<Camera>();
+            UnityEngine.Camera camera = UnityEngine.Camera.main ?? FindFirstObjectByType<UnityEngine.Camera>();
             if (camera == null)
             {
                 return;
@@ -459,7 +459,7 @@ namespace Reclaim.Flow
             targetCamera = GetComponent<Camera>();
             if (targetCamera == null)
             {
-                targetCamera = Camera.main ?? FindFirstObjectByType<Camera>();
+                targetCamera = UnityEngine.Camera.main ?? FindFirstObjectByType<UnityEngine.Camera>();
             }
         }
 
@@ -551,3 +551,4 @@ namespace Reclaim.Flow
         }
     }
 }
+

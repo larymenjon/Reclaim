@@ -18,6 +18,11 @@ namespace Reclaim.Grid
 
         public void SetOccupancy(OccupancyType occupancyType, Object occupant)
         {
+            if (occupancyType != OccupancyType.None && occupant == null)
+            {
+                Debug.LogWarning($"GridCellData {Coordinate}: occupied cell set without occupant reference.");
+            }
+
             OccupancyType = occupancyType;
             Occupant = occupant;
         }

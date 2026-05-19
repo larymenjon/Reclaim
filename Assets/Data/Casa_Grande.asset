@@ -22,8 +22,8 @@ MonoBehaviour:
   woodCost: 40
   scrapCost: 25
   constructionDurationSeconds: 10
-  foundationStagePrefab: {fileID: 0}
-  midStagePrefab: {fileID: 0}
-  completedStagePrefab: {fileID: 1410068957854387501, guid: 0304cced50feff84a8db12bd03d1cf6a, type: 3}
+  foundationStagePrefab: {fileID: 3697782747456591798, guid: 5c181c520739698498ac14fb67253528, type: 3}
+  midStagePrefab: {fileID: 811803722756758650, guid: d5f7637cb6f82764db9a6a7a2a6a91cf, type: 3}
+  completedStagePrefab: {fileID: 4951012691837065938, guid: e685644a3cb1d2545b40fbf1b8722908, type: 3}
   allowGardenPlotSelection: 0
   defaultGardenPlotSize: {x: 2, y: 2}

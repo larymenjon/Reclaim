@@ -4,6 +4,7 @@ using Reclaim;
 using Reclaim.Core;
 using Reclaim.Grid;
 using Reclaim.Input;
+using Reclaim.Resources.Forestry;
 using Reclaim.UI;
 using UnityEngine;
 
@@ -19,6 +20,8 @@ namespace Reclaim.Building
         private GameManager _gameManager;
         private PlacementHistory _history;
         private TopHeaderHudController _topHud;
+        private InputHandler _inputHandler;
+        private TreeForestrySystem _forestrySystem;
 
         private BuildingData _selectedBuilding;
         private int _rotationSteps;
@@ -38,13 +41,37 @@ namespace Reclaim.Building
             _previewSystem = previewSystem;
             _gameManager = gameManager;
             _history = history;
+            _inputHandler = inputHandler;
             _topHud = FindFirstObjectByType<TopHeaderHudController>();
+            _forestrySystem = FindFirstObjectByType<TreeForestrySystem>();
 
-            inputHandler.OnPointerMoved += HandlePointerMoved;
-            inputHandler.OnPrimaryPressed += HandlePrimaryPressed;
-            inputHandler.OnRotatePressed += HandleRotatePressed;
-            inputHandler.OnSecondaryPressed += HandleSecondaryPressed;
+            if (_inputHandler == null || _gameManager == null || _previewSystem == null || _gridManager == null)
+            {
+                Debug.LogError("BuildingSystem.Initialize missing required dependencies.", this);
+                return;
+            }
+
+            _inputHandler.OnPointerMoved += HandlePointerMoved;
+            _inputHandler.OnPrimaryPressed += HandlePrimaryPressed;
+            _inputHandler.OnRotatePressed += HandleRotatePressed;
+            _inputHandler.OnSecondaryPressed += HandleSecondaryPressed;
             _gameManager.OnModeChanged += HandleModeChanged;
+        }
+
+        private void OnDestroy()
+        {
+            if (_inputHandler != null)
+            {
+                _inputHandler.OnPointerMoved -= HandlePointerMoved;
+                _inputHandler.OnPrimaryPressed -= HandlePrimaryPressed;
+                _inputHandler.OnRotatePressed -= HandleRotatePressed;
+                _inputHandler.OnSecondaryPressed -= HandleSecondaryPressed;
+            }
+
+            if (_gameManager != null)
+            {
+                _gameManager.OnModeChanged -= HandleModeChanged;
+            }
         }
 
         public void SelectBuilding(BuildingData buildingData)
@@ -125,6 +152,8 @@ namespace Reclaim.Building
                 Debug.Log($"Not enough resources to build '{placedData.DisplayName}'. Need Wood {placedData.WoodCost}, Scrap {placedData.ScrapCost}.");
                 return;
             }
+
+            ClearTreesInsideFootprint(cells);
 
             GameObject root = new GameObject($"{placedData.DisplayName}_Building");
             root.transform.SetPositionAndRotation(worldPosition, rotation);
@@ -257,6 +286,41 @@ namespace Reclaim.Building
                 }
 
                 selector.BeginSelection(building.Data.DefaultGardenPlotSize);
+            }
+        }
+
+        private void ClearTreesInsideFootprint(IReadOnlyList<GridCoordinate> cells)
+        {
+            if (_forestrySystem == null || _gridManager == null || cells == null || cells.Count == 0)
+            {
+                return;
+            }
+
+            float overlapRadius = Mathf.Max(0.2f, _gridManager.CellSize * 0.45f);
+            HashSet<TreeResourceNode> affectedNodes = new HashSet<TreeResourceNode>();
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                Vector3 cellCenter = _gridManager.GridToWorld(cells[i], true);
+                Collider[] hits = Physics.OverlapSphere(cellCenter + Vector3.up * 0.5f, overlapRadius);
+                for (int h = 0; h < hits.Length; h++)
+                {
+                    if (hits[h] == null)
+                    {
+                        continue;
+                    }
+
+                    TreeResourceNode node = hits[h].GetComponentInParent<TreeResourceNode>();
+                    if (node != null)
+                    {
+                        affectedNodes.Add(node);
+                    }
+                }
+            }
+
+            foreach (TreeResourceNode node in affectedNodes)
+            {
+                node.TryClearForConstruction(_forestrySystem);
             }
         }
     }

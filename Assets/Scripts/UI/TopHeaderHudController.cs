@@ -23,6 +23,7 @@ namespace Reclaim.UI
 
         [Header("Time")]
         [SerializeField] private TimeSystem timeSystem;
+        [SerializeField] private NewGameSetupManager setupManager;
         [SerializeField] private int daysPerMonth = 30;
 
         [Header("Initial Values")]
@@ -281,6 +282,11 @@ namespace Reclaim.UI
             {
                 timeSystem = FindFirstObjectByType<TimeSystem>();
             }
+
+            if (setupManager == null)
+            {
+                setupManager = FindFirstObjectByType<NewGameSetupManager>();
+            }
         }
 
         private void HandleDayAdvanced(int day)
@@ -350,7 +356,6 @@ namespace Reclaim.UI
         private string GetCityName()
         {
             // Tenta obter o nome da cidade do NewGameSetupManager
-            var setupManager = FindObjectOfType<NewGameSetupManager>();
             if (setupManager != null)
             {
                 return setupManager.SelectedLeaderName;
@@ -361,5 +366,4 @@ namespace Reclaim.UI
         }
     }
 }
-
 

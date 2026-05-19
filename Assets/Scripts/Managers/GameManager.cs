@@ -75,6 +75,12 @@ namespace Reclaim
             SetMode(GameMode.Build);
         }
 
+        // UnityEvent-safe overload for buttons configured with Object arguments.
+        public void EnterBuildMode(UnityEngine.Object buildingAsset)
+        {
+            EnterBuildMode(buildingAsset as BuildingData);
+        }
+
         public void EnterRoadMode()
         {
             SetMode(GameMode.Road);
@@ -88,6 +94,12 @@ namespace Reclaim
         public void SelectBuildingForUI(BuildingData buildingData)
         {
             buildingSystem.SelectBuilding(buildingData);
+        }
+
+        // UnityEvent-safe overload for buttons configured with Object arguments.
+        public void SelectBuildingForUI(UnityEngine.Object buildingAsset)
+        {
+            SelectBuildingForUI(buildingAsset as BuildingData);
         }
 
         private void HandleUndoPressed()

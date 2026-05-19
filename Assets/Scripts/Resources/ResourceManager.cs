@@ -10,13 +10,21 @@ namespace Reclaim.Survival.Resources
         [Serializable]
         private struct ResourceSetup
         {
-            [SerializeField] public ResourceDefinition definition;
-            [SerializeField] public float overrideStartingAmount;
-            [SerializeField] public bool useOverrideStart;
-            [SerializeField] public float overrideCapacity;
-            [SerializeField] public bool useOverrideCapacity;
-            [SerializeField] public float passiveProductionPerDay;
-            [SerializeField] public float passiveConsumptionPerDay;
+            [SerializeField] private ResourceDefinition definition;
+            [SerializeField] private float overrideStartingAmount;
+            [SerializeField] private bool useOverrideStart;
+            [SerializeField] private float overrideCapacity;
+            [SerializeField] private bool useOverrideCapacity;
+            [SerializeField] private float passiveProductionPerDay;
+            [SerializeField] private float passiveConsumptionPerDay;
+
+            public ResourceDefinition Definition => definition;
+            public float OverrideStartingAmount => overrideStartingAmount;
+            public bool UseOverrideStart => useOverrideStart;
+            public float OverrideCapacity => overrideCapacity;
+            public bool UseOverrideCapacity => useOverrideCapacity;
+            public float PassiveProductionPerDay => passiveProductionPerDay;
+            public float PassiveConsumptionPerDay => passiveConsumptionPerDay;
         }
 
         private struct ResourceRuntime
@@ -40,23 +48,23 @@ namespace Reclaim.Survival.Resources
             for (int i = 0; i < resourceSetups.Count; i++)
             {
                 ResourceSetup setup = resourceSetups[i];
-                if (setup.definition == null)
+                if (setup.Definition == null)
                 {
                     continue;
                 }
 
-                float startAmount = setup.useOverrideStart ? setup.overrideStartingAmount : setup.definition.DefaultStartingAmount;
-                float capacity = setup.useOverrideCapacity ? setup.overrideCapacity : setup.definition.DefaultStorageCapacity;
+                float startAmount = setup.UseOverrideStart ? setup.OverrideStartingAmount : setup.Definition.DefaultStartingAmount;
+                float capacity = setup.UseOverrideCapacity ? setup.OverrideCapacity : setup.Definition.DefaultStorageCapacity;
 
                 ResourceRuntime runtime = new ResourceRuntime
                 {
                     Amount = Mathf.Clamp(startAmount, 0f, capacity),
                     Capacity = Mathf.Max(1f, capacity),
-                    PassiveProductionPerDay = setup.passiveProductionPerDay,
-                    PassiveConsumptionPerDay = setup.passiveConsumptionPerDay
+                    PassiveProductionPerDay = setup.PassiveProductionPerDay,
+                    PassiveConsumptionPerDay = setup.PassiveConsumptionPerDay
                 };
 
-                _resources[setup.definition.ResourceType] = runtime;
+                _resources[setup.Definition.ResourceType] = runtime;
             }
 
             if (_resources.Count == 0)

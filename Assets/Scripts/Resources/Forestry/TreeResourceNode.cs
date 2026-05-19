@@ -6,6 +6,9 @@ namespace Reclaim.Resources.Forestry
     public class TreeResourceNode : MonoBehaviour
     {
         [Header("Visuals")]
+        [SerializeField] private GameObject standingPrefab;
+        [SerializeField] private GameObject choppedPrefab;
+        [SerializeField] private GameObject growingPrefab;
         [SerializeField] private GameObject standingVisual;
         [SerializeField] private GameObject choppedVisual;
         [SerializeField] private GameObject growingVisual;
@@ -38,8 +41,24 @@ namespace Reclaim.Resources.Forestry
             return true;
         }
 
+        public bool TryClearForConstruction(TreeForestrySystem forestrySystem)
+        {
+            if (!IsHarvestable || forestrySystem == null)
+            {
+                return false;
+            }
+
+            StopAllCoroutines();
+            IsBusy = false;
+            State = TreeLifecycleState.Chopped;
+            ApplyStateVisual();
+            forestrySystem.AddWood(woodYield, transform.position);
+            return true;
+        }
+
         private void Awake()
         {
+            EnsureVisualInstances();
             ApplyStateVisual();
         }
 
@@ -50,7 +69,7 @@ namespace Reclaim.Resources.Forestry
 
             State = TreeLifecycleState.Chopped;
             ApplyStateVisual();
-            forestrySystem.AddWood(woodYield);
+            forestrySystem.AddWood(woodYield, transform.position);
             forestrySystem.ReleaseWorker();
 
             yield return new WaitForSeconds(regrowDelaySeconds);
@@ -68,6 +87,30 @@ namespace Reclaim.Resources.Forestry
             if (standingVisual != null) standingVisual.SetActive(State == TreeLifecycleState.Standing);
             if (choppedVisual != null) choppedVisual.SetActive(State == TreeLifecycleState.Chopped);
             if (growingVisual != null) growingVisual.SetActive(State == TreeLifecycleState.Growing);
+        }
+
+        private void EnsureVisualInstances()
+        {
+            if (standingVisual == null && standingPrefab != null)
+            {
+                standingVisual = Instantiate(standingPrefab, transform);
+                standingVisual.transform.localPosition = Vector3.zero;
+                standingVisual.transform.localRotation = Quaternion.identity;
+            }
+
+            if (choppedVisual == null && choppedPrefab != null)
+            {
+                choppedVisual = Instantiate(choppedPrefab, transform);
+                choppedVisual.transform.localPosition = Vector3.zero;
+                choppedVisual.transform.localRotation = Quaternion.identity;
+            }
+
+            if (growingVisual == null && growingPrefab != null)
+            {
+                growingVisual = Instantiate(growingPrefab, transform);
+                growingVisual.transform.localPosition = Vector3.zero;
+                growingVisual.transform.localRotation = Quaternion.identity;
+            }
         }
     }
 }

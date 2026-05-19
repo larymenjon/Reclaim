@@ -1,292 +1,174 @@
 using UnityEngine;
-using System.Collections;
-
 
 namespace TMPro.Examples
 {
-    
+    [DisallowMultipleComponent]
     public class CameraController : MonoBehaviour
     {
-        public enum CameraModes { Follow, Isometric, Free }
+        [Header("Movement (WASD / Edge Scrolling)")]
+        [SerializeField] private float moveSpeed = 20f;
+        [SerializeField] private float sprintMultiplier = 2.5f;
+        [SerializeField] private float movementSmoothing = 10f;
+        [SerializeField] private bool useEdgeScrolling = true;
+        [SerializeField] private float edgePaddingPixels = 15f;
 
-        private Transform cameraTransform;
-        private Transform dummyTarget;
+        [Header("Rotation (Middle Mouse / Alt + Mouse)")]
+        [SerializeField] private float rotationSensitivity = 120f;
+        [SerializeField] private float rotationSmoothing = 15f;
+        [SerializeField] private float minElevationAngle = 15f;
+        [SerializeField] private float maxElevationAngle = 75f;
 
-        public Transform CameraTarget;
+        [Header("Zoom (Mouse Wheel)")]
+        [SerializeField] private float zoomSensitivity = 15f;
+        [SerializeField] private float zoomSmoothing = 8f;
+        [SerializeField] private float minZoomDistance = 5f;
+        [SerializeField] private float maxZoomDistance = 60f;
+        
+        [Tooltip("Garante que a inclinação mude dependendo do nível de zoom, igual a Manor Lords.")]
+        [SerializeField] private bool dynamicPitchBasedOnZoom = true;
 
-        public float FollowDistance = 30.0f;
-        public float MaxFollowDistance = 100.0f;
-        public float MinFollowDistance = 2.0f;
+        // Estados internos (Targeting para interpolação suave)
+        private Vector3 _targetPivotPosition;
+        private float _targetOrbitAngle;
+        private float _targetElevationAngle;
+        private float _targetZoomDistance;
 
-        public float ElevationAngle = 30.0f;
-        public float MaxElevationAngle = 85.0f;
-        public float MinElevationAngle = 0f;
+        private Vector3 _currentPivotPosition;
+        private float _currentOrbitAngle;
+        private float _currentElevationAngle;
+        private float _currentZoomDistance;
 
-        public float OrbitalAngle = 0f;
+        private Transform _cameraTransform;
 
-        public CameraModes CameraMode = CameraModes.Follow;
-
-        public bool MovementSmoothing = true;
-        public bool RotationSmoothing = false;
-        private bool previousSmoothing;
-
-        public float MovementSmoothingValue = 25f;
-        public float RotationSmoothingValue = 5.0f;
-
-        public float MoveSensitivity = 2.0f;
-
-        private Vector3 currentVelocity = Vector3.zero;
-        private Vector3 desiredPosition;
-        private float mouseX;
-        private float mouseY;
-        private Vector3 moveVector;
-        private float mouseWheel;
-
-        // Controls for Touches on Mobile devices
-        //private float prev_ZoomDelta;
-
-
-        private const string event_SmoothingValue = "Slider - Smoothing Value";
-        private const string event_FollowDistance = "Slider - Camera Zoom";
-
-
-        void Awake()
+        private void Awake()
         {
-            if (QualitySettings.vSyncCount > 0)
-                Application.targetFrameRate = 60;
+            _cameraTransform = transform;
+            
+            // Inicializa os alvos com os valores atuais da cena para evitar saltos visuais
+            _currentPivotPosition = _targetPivotPosition = transform.position;
+            _targetOrbitAngle = _currentOrbitAngle = transform.eulerAngles.y;
+            _targetElevationAngle = _currentElevationAngle = transform.eulerAngles.x;
+            _targetZoomDistance = _currentZoomDistance = maxZoomDistance * 0.5f;
+        }
+
+        private void Update()
+        {
+            HandleInputs();
+            CalculateSmoothing();
+            ApplyTransform();
+        }
+
+        private void HandleInputs()
+        {
+            // 1. VELOCIDADE DE MOVIMENTO (SHIFT PARA SPRINTAR)
+            float currentSpeed = moveSpeed;
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            {
+                currentSpeed *= sprintMultiplier;
+            }
+
+            // 2. ENTRADA DE MOVIMENTO (WASD / SETAS)
+            float inputX = Input.GetAxisRaw("Horizontal");
+            float inputZ = Input.GetAxisRaw("Vertical");
+            Vector3 moveInput = new Vector3(inputX, 0f, inputZ).normalized;
+
+            // 3. EDGE SCROLLING (Manor Lords / Farthest Frontier)
+            if (useEdgeScrolling && moveInput.sqrMagnitude < 0.01f)
+            {
+                Vector3 mousePos = Input.mousePosition;
+                if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
+                {
+                    if (mousePos.x < edgePaddingPixels) moveInput.x = -1f;
+                    else if (mousePos.x > Screen.width - edgePaddingPixels) moveInput.x = 1f;
+
+                    if (mousePos.y < edgePaddingPixels) moveInput.z = -1f;
+                    else if (mousePos.y > Screen.height - edgePaddingPixels) moveInput.z = 1f;
+                }
+            }
+
+            // Move o pivô baseado na rotação horizontal atual da câmera (pressione W e vá para onde a câmera olha)
+            if (moveInput.sqrMagnitude > 0.01f)
+            {
+                Vector3 forward = _cameraTransform.forward;
+                forward.y = 0f;
+                forward.Normalize();
+
+                Vector3 right = _cameraTransform.right;
+                right.y = 0f;
+                right.Normalize();
+
+                Vector3 direction = (forward * moveInput.z + right * moveInput.x).normalized;
+                _targetPivotPosition += direction * (currentSpeed * Time.deltaTime);
+            }
+
+            // 4. ROTAÇÃO DA CÂMERA (Botão do Meio do Mouse ou Alt+Clique Direito)
+            if (Input.GetMouseButton(2) || (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(1)))
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+
+                _targetOrbitAngle += Input.GetAxis("Mouse X") * rotationSensitivity * Time.deltaTime;
+                
+                if (!dynamicPitchBasedOnZoom)
+                {
+                    _targetElevationAngle -= Input.GetAxis("Mouse Y") * rotationSensitivity * Time.deltaTime;
+                    _targetElevationAngle = Mathf.Clamp(_targetElevationAngle, minElevationAngle, maxElevationAngle);
+                }
+            }
             else
-                Application.targetFrameRate = -1;
-
-            if (Application.platform == RuntimePlatform.IPhonePlayer || Application.platform == RuntimePlatform.Android)
-                Input.simulateMouseWithTouches = false;
-
-            cameraTransform = transform;
-            previousSmoothing = MovementSmoothing;
-        }
-
-
-        // Use this for initialization
-        void Start()
-        {
-            if (CameraTarget == null)
             {
-                // If we don't have a target (assigned by the player, create a dummy in the center of the scene).
-                dummyTarget = new GameObject("Camera Target").transform;
-                CameraTarget = dummyTarget;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+
+            // 5. ZOOM (Roda do mouse)
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Abs(scroll) > 0.01f)
+            {
+                _targetZoomDistance -= scroll * zoomSensitivity;
+                _targetZoomDistance = Mathf.Clamp(_targetZoomDistance, minZoomDistance, maxZoomDistance);
             }
         }
 
-        // Update is called once per frame
-        void LateUpdate()
+        private void CalculateSmoothing()
         {
-            GetPlayerInput();
+            // Interpolações usando Lerp amortecido por DeltaTime (Garante fluidez independente do framerate)
+            _currentPivotPosition = Vector3.Lerp(_currentPivotPosition, _targetPivotPosition, Time.deltaTime * movementSmoothing);
+            _currentOrbitAngle = Mathf.LerpAngle(_currentOrbitAngle, _targetOrbitAngle, Time.deltaTime * rotationSmoothing);
+            _currentZoomDistance = Mathf.Lerp(_currentZoomDistance, _targetZoomDistance, Time.deltaTime * zoomSmoothing);
 
-
-            // Check if we still have a valid target
-            if (CameraTarget != null)
+            if (dynamicPitchBasedOnZoom)
             {
-                if (CameraMode == CameraModes.Isometric)
-                {
-                    desiredPosition = CameraTarget.position + Quaternion.Euler(ElevationAngle, OrbitalAngle, 0f) * new Vector3(0, 0, -FollowDistance);
-                }
-                else if (CameraMode == CameraModes.Follow)
-                {
-                    desiredPosition = CameraTarget.position + CameraTarget.TransformDirection(Quaternion.Euler(ElevationAngle, OrbitalAngle, 0f) * (new Vector3(0, 0, -FollowDistance)));
-                }
-                else
-                {
-                    // Free Camera implementation
-                }
-
-                if (MovementSmoothing == true)
-                {
-                    // Using Smoothing
-                    cameraTransform.position = Vector3.SmoothDamp(cameraTransform.position, desiredPosition, ref currentVelocity, MovementSmoothingValue * Time.fixedDeltaTime);
-                    //cameraTransform.position = Vector3.Lerp(cameraTransform.position, desiredPosition, Time.deltaTime * 5.0f);
-                }
-                else
-                {
-                    // Not using Smoothing
-                    cameraTransform.position = desiredPosition;
-                }
-
-                if (RotationSmoothing == true)
-                    cameraTransform.rotation = Quaternion.Lerp(cameraTransform.rotation, Quaternion.LookRotation(CameraTarget.position - cameraTransform.position), RotationSmoothingValue * Time.deltaTime);
-                else
-                {
-                    cameraTransform.LookAt(CameraTarget);
-                }
-
+                // Quanto mais perto do chão (Zoom menor), mais deitada/horizontal a câmera fica.
+                float zoomt = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _currentZoomDistance);
+                _targetElevationAngle = Mathf.Lerp(minElevationAngle, maxElevationAngle, zoomt);
+                _currentElevationAngle = Mathf.LerpAngle(_currentElevationAngle, _targetElevationAngle, Time.deltaTime * rotationSmoothing);
             }
-
+            else
+            {
+                _currentElevationAngle = Mathf.LerpAngle(_currentElevationAngle, _targetElevationAngle, Time.deltaTime * rotationSmoothing);
+            }
         }
 
-
-
-        void GetPlayerInput()
+        private void ApplyTransform()
         {
-            moveVector = Vector3.zero;
+            // Calcula a rotação final combinada
+            Quaternion rotation = Quaternion.Euler(_currentElevationAngle, _currentOrbitAngle, 0f);
+            
+            // Calcula a posição recuada baseada no zoom a partir do ponto central focal (pivô)
+            Vector3 positionOffset = rotation * new Vector3(0f, 0f, -_currentZoomDistance);
+            
+            // Aplica os dados transformados diretamente na câmera
+            transform.position = _currentPivotPosition + positionOffset;
+            transform.rotation = rotation;
+        }
 
-            // Check Mouse Wheel Input prior to Shift Key so we can apply multiplier on Shift for Scrolling
-            mouseWheel = Input.GetAxis("Mouse ScrollWheel");
-
-            float touchCount = Input.touchCount;
-
-            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) || touchCount > 0)
-            {
-                mouseWheel *= 10;
-
-                if (Input.GetKeyDown(KeyCode.I))
-                    CameraMode = CameraModes.Isometric;
-
-                if (Input.GetKeyDown(KeyCode.F))
-                    CameraMode = CameraModes.Follow;
-
-                if (Input.GetKeyDown(KeyCode.S))
-                    MovementSmoothing = !MovementSmoothing;
-
-
-                // Check for right mouse button to change camera follow and elevation angle
-                if (Input.GetMouseButton(1))
-                {
-                    mouseY = Input.GetAxis("Mouse Y");
-                    mouseX = Input.GetAxis("Mouse X");
-
-                    if (mouseY > 0.01f || mouseY < -0.01f)
-                    {
-                        ElevationAngle -= mouseY * MoveSensitivity;
-                        // Limit Elevation angle between min & max values.
-                        ElevationAngle = Mathf.Clamp(ElevationAngle, MinElevationAngle, MaxElevationAngle);
-                    }
-
-                    if (mouseX > 0.01f || mouseX < -0.01f)
-                    {
-                        OrbitalAngle += mouseX * MoveSensitivity;
-                        if (OrbitalAngle > 360)
-                            OrbitalAngle -= 360;
-                        if (OrbitalAngle < 0)
-                            OrbitalAngle += 360;
-                    }
-                }
-
-                // Get Input from Mobile Device
-                if (touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved)
-                {
-                    Vector2 deltaPosition = Input.GetTouch(0).deltaPosition;
-
-                    // Handle elevation changes
-                    if (deltaPosition.y > 0.01f || deltaPosition.y < -0.01f)
-                    {
-                        ElevationAngle -= deltaPosition.y * 0.1f;
-                        // Limit Elevation angle between min & max values.
-                        ElevationAngle = Mathf.Clamp(ElevationAngle, MinElevationAngle, MaxElevationAngle);
-                    }
-
-
-                    // Handle left & right 
-                    if (deltaPosition.x > 0.01f || deltaPosition.x < -0.01f)
-                    {
-                        OrbitalAngle += deltaPosition.x * 0.1f;
-                        if (OrbitalAngle > 360)
-                            OrbitalAngle -= 360;
-                        if (OrbitalAngle < 0)
-                            OrbitalAngle += 360;
-                    }
-
-                }
-
-                // Check for left mouse button to select a new CameraTarget or to reset Follow position
-                if (Input.GetMouseButton(0))
-                {
-                    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                    RaycastHit hit;
-
-                    if (Physics.Raycast(ray, out hit, 300, 1 << 10 | 1 << 11 | 1 << 12 | 1 << 14))
-                    {
-                        if (hit.transform == CameraTarget)
-                        {
-                            // Reset Follow Position
-                            OrbitalAngle = 0;
-                        }
-                        else
-                        {
-                            CameraTarget = hit.transform;
-                            OrbitalAngle = 0;
-                            MovementSmoothing = previousSmoothing;
-                        }
-
-                    }
-                }
-
-
-                if (Input.GetMouseButton(2))
-                {
-                    if (dummyTarget == null)
-                    {
-                        // We need a Dummy Target to anchor the Camera
-                        dummyTarget = new GameObject("Camera Target").transform;
-                        dummyTarget.position = CameraTarget.position;
-                        dummyTarget.rotation = CameraTarget.rotation;
-                        CameraTarget = dummyTarget;
-                        previousSmoothing = MovementSmoothing;
-                        MovementSmoothing = false;
-                    }
-                    else if (dummyTarget != CameraTarget)
-                    {
-                        // Move DummyTarget to CameraTarget
-                        dummyTarget.position = CameraTarget.position;
-                        dummyTarget.rotation = CameraTarget.rotation;
-                        CameraTarget = dummyTarget;
-                        previousSmoothing = MovementSmoothing;
-                        MovementSmoothing = false;
-                    }
-
-
-                    mouseY = Input.GetAxis("Mouse Y");
-                    mouseX = Input.GetAxis("Mouse X");
-
-                    moveVector = cameraTransform.TransformDirection(mouseX, mouseY, 0);
-
-                    dummyTarget.Translate(-moveVector, Space.World);
-
-                }
-
-            }
-
-            // Check Pinching to Zoom in - out on Mobile device
-            if (touchCount == 2)
-            {
-                Touch touch0 = Input.GetTouch(0);
-                Touch touch1 = Input.GetTouch(1);
-
-                Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
-                Vector2 touch1PrevPos = touch1.position - touch1.deltaPosition;
-
-                float prevTouchDelta = (touch0PrevPos - touch1PrevPos).magnitude;
-                float touchDelta = (touch0.position - touch1.position).magnitude;
-
-                float zoomDelta = prevTouchDelta - touchDelta;
-
-                if (zoomDelta > 0.01f || zoomDelta < -0.01f)
-                {
-                    FollowDistance += zoomDelta * 0.25f;
-                    // Limit FollowDistance between min & max values.
-                    FollowDistance = Mathf.Clamp(FollowDistance, MinFollowDistance, MaxFollowDistance);
-                }
-
-
-            }
-
-            // Check MouseWheel to Zoom in-out
-            if (mouseWheel < -0.01f || mouseWheel > 0.01f)
-            {
-
-                FollowDistance -= mouseWheel * 5.0f;
-                // Limit FollowDistance between min & max values.
-                FollowDistance = Mathf.Clamp(FollowDistance, MinFollowDistance, MaxFollowDistance);
-            }
-
-
+        /// <summary>
+        /// Permite que outros sistemas (como foco em eventos do jogo) teleportem ou centralizem a câmera instantaneamente.
+        /// </summary>
+        public void FocusOnPosition(Vector3 worldPosition)
+        {
+            _targetPivotPosition = worldPosition;
         }
     }
 }

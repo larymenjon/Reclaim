@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Industry Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 2890711796406484526, guid: 802446ba578ec614cbc619c6dcc64acf, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -5,15 +5,24 @@ namespace Reclaim.Data
     [CreateAssetMenu(fileName = "New Leader", menuName = "Reclaim/Leader Data")]
     public class LeaderData : ScriptableObject
     {
-        public string leaderName;
-        [TextArea(3, 5)] public string description;
-        public string catchphrase; // Frase_Avatar
-        public string subDescription; // Ex: "Especialista em Logística"
-        public Sprite portrait;
-        
+        [SerializeField] private string leaderName;
+        [SerializeField, TextArea(3, 5)] private string description;
+        [SerializeField] private string catchphrase;
+        [SerializeField] private string subDescription;
+        [SerializeField] private Sprite portrait;
+
         [Header("Buffs / Attributes")]
-        public float foodEfficiency = 1.0f;
-        public float explorationSpeed = 1.0f;
-        public int startingScrap = 100;
+        [SerializeField] private float foodEfficiency = 1.0f;
+        [SerializeField] private float explorationSpeed = 1.0f;
+        [SerializeField] private int startingScrap = 100;
+
+        public string LeaderName => leaderName;
+        public string Description => description;
+        public string Catchphrase => catchphrase;
+        public string SubDescription => subDescription;
+        public Sprite Portrait => portrait;
+        public float FoodEfficiency => foodEfficiency;
+        public float ExplorationSpeed => explorationSpeed;
+        public int StartingScrap => startingScrap;
     }
 }

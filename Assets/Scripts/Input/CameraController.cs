@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -10,7 +10,7 @@ namespace Reclaim.Input
     {
         [Header("Rig References")]
         [SerializeField] private Transform cameraPivot;
-        [SerializeField] private Camera targetCamera;
+        [SerializeField] private UnityEngine.Camera targetCamera;
 
         [Header("Planar Movement")]
         [SerializeField] private float moveSensitivity = 50f;
@@ -38,6 +38,9 @@ namespace Reclaim.Input
         [SerializeField] private float zoomToMouseInfluence = 0.15f;
         [SerializeField] private LayerMask groundRaycastMask = ~0;
         [SerializeField] private float fallbackGroundHeight = 0f;
+        [SerializeField, Min(0f)] private float minimumCameraHeightAboveGround = 3f;
+        [SerializeField, Min(0.01f)] private float groundHeightAdjustSmoothTime = 0.18f;
+        [SerializeField] private bool placeRigAtBoundsCenterOnAwake = true;
 
         [Header("Rotation & Auto-Pitch")]
         [SerializeField] private float yawSensitivity = 220f;
@@ -77,6 +80,7 @@ namespace Reclaim.Input
         private float _zoomDistanceVelocity;
         private float _zoomSpeed;
         private bool _useOrbitCameraMode;
+        private float _cameraHeightVelocity;
 
         private void Awake()
         {
@@ -94,9 +98,13 @@ namespace Reclaim.Input
             float initialZoom = _useOrbitCameraMode ? Mathf.Abs(transform.position.y) : Mathf.Abs(targetCamera.transform.localPosition.z);
             _targetZoomDistance = Mathf.Clamp(initialZoom, minZoomDistance, maxZoomDistance);
             _currentZoomDistance = _targetZoomDistance;
+            float initialZoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
+            _targetPitch = Mathf.Lerp(minPitch, maxPitch, initialZoomT);
+            _currentPitch = _targetPitch;
 
             ResolveTerrainReference();
             RefreshBoundsFromSurface();
+            SnapInitialHeightsToGround();
         }
 
         private void Update()
@@ -206,6 +214,8 @@ namespace Reclaim.Input
                 localCamPos.z = -_currentZoomDistance;
                 targetCamera.transform.localPosition = localCamPos;
             }
+
+            KeepCameraAboveGround(deltaTime);
         }
 
         private void ClampTargets()
@@ -452,5 +462,63 @@ namespace Reclaim.Input
             halfHeight = (maxZ - minZ) * 0.5f;
             return true;
         }
+
+        private void SnapInitialHeightsToGround()
+        {
+            if (useMapBounds && placeRigAtBoundsCenterOnAwake)
+            {
+                GetEffectiveBounds(out float minX, out float maxX, out float minZ, out float maxZ);
+                _targetRigPosition.x = (minX + maxX) * 0.5f;
+                _targetRigPosition.z = (minZ + maxZ) * 0.5f;
+                _currentRigPosition = _targetRigPosition;
+            }
+
+            if (_useOrbitCameraMode)
+            {
+                Vector3 camPos = transform.position;
+                float camGroundHeight = SampleGroundHeightAt(camPos.x, camPos.z);
+                float minCamY = camGroundHeight + minimumCameraHeightAboveGround;
+                if (camPos.y < minCamY)
+                {
+                    camPos.y = minCamY;
+                    transform.position = camPos;
+                }
+            }
+        }
+
+        private void KeepCameraAboveGround(float deltaTime)
+        {
+            if (_useOrbitCameraMode)
+            {
+                Vector3 camPos = transform.position;
+                float camGroundHeight = SampleGroundHeightAt(camPos.x, camPos.z);
+                float minCamY = camGroundHeight + minimumCameraHeightAboveGround;
+                if (camPos.y < minCamY)
+                {
+                    float lift = Mathf.Lerp(0f, minCamY - camPos.y, 1f - Mathf.Exp(-Mathf.Max(0.01f, 1f / groundHeightAdjustSmoothTime) * deltaTime));
+                    camPos.y += lift;
+                    transform.position = camPos;
+                    _currentRigPosition.y += lift;
+                    _targetRigPosition.y += lift;
+                }
+            }
+        }
+
+        private float SampleGroundHeightAt(float x, float z)
+        {
+            Vector3 origin = new Vector3(x, 5000f, z);
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10000f, groundRaycastMask))
+            {
+                return hit.point.y;
+            }
+
+            if (mapTerrain != null && mapTerrain.terrainData != null)
+            {
+                return mapTerrain.SampleHeight(new Vector3(x, 0f, z)) + mapTerrain.transform.position.y;
+            }
+
+            return fallbackGroundHeight;
+        }
     }
 }
+

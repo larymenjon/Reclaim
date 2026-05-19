@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Storage Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 912113108319728667, guid: ba16b92b5686e6c4fbb9a4eb5ba18dc1, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4581719582078181609, guid: ba16b92b5686e6c4fbb9a4eb5ba18dc1, type: 3}
       propertyPath: m_LocalPosition.x
       value: 525.0299

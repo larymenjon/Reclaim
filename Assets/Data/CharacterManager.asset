@@ -1,0 +1,199 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1412f6438a828c94293c31277548aaeb, type: 3}
+  m_Name: CharacterManager
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.UI.CharacterManager
+  characters:
+  - characterName: Helena Kravik
+    description: "Helena era respons\xE1vel por megaprojetos antes do colapso. Hoje,
+      ela reconstr\xF3i o mundo com o que sobrou \u2014 sem espa\xE7o para erros
+      ou sentimentalismo."
+    quote: "Estruturas n\xE3o falham. Pessoas falham."
+    portrait: {fileID: 0}
+    specialization: 0
+    passiveName: "Efici\xEAncia Brutal"
+    passiveDescription: "Constru\xE7\xF5es s\xE3o conclu\xEDdas mais r\xE1pido."
+    activeName: "Improvisa\xE7\xE3o Estrutural"
+    activeDescription: "Permite construir sem todos os recursos necess\xE1rios (qualidade
+      reduzida)."
+    constructionSpeedBonus: 25
+    materialCostBonus: -20
+    defenseBonus: 0
+    happinessBonus: -15
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 0
+    resourceBonus: 0
+    revoltChanceBonus: 0
+    resourceConsumptionBonus: 0
+    expansionBonus: 0
+    securityBonus: 0
+    productivityBonus: -15
+    trustBonus: 0
+    eventName: Cortar Custos
+    eventDescription: "Usar materiais inferiores para acelerar expans\xE3o?"
+  - characterName: Marcus Hale
+    description: "Veterano de guerras esquecidas, Marcus acredita que disciplina
+      \xE9 a \xFAnica coisa que separa ordem do caos."
+    quote: "Seguran\xE7a n\xE3o \xE9 opcional. \xC9 sobreviv\xEAncia."
+    portrait: {fileID: 0}
+    specialization: 1
+    passiveName: Doutrina de Combate
+    passiveDescription: Unidades defensivas mais eficientes.
+    activeName: Lei Marcial
+    activeDescription: Reduz revoltas drasticamente por um tempo.
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 30
+    happinessBonus: -20
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 0
+    resourceBonus: 0
+    revoltChanceBonus: -20
+    resourceConsumptionBonus: 10
+    expansionBonus: 0
+    securityBonus: 0
+    productivityBonus: 0
+    trustBonus: 0
+    eventName: Toque de Recolher
+    eventDescription: "Impor controle total da popula\xE7\xE3o?"
+  - characterName: Elara Venn
+    description: "Mesmo ap\xF3s o fim, Elara acredita que a vida sempre encontra
+      um caminho. Ela luta para reconstruir um mundo sustent\xE1vel."
+    quote: "Se a terra ainda respira\u2026 n\xF3s tamb\xE9m podemos."
+    portrait: {fileID: 0}
+    specialization: 2
+    passiveName: "Cultivo Sustent\xE1vel"
+    passiveDescription: "Produ\xE7\xE3o de comida aumentada."
+    activeName: Solo Regenerativo
+    activeDescription: "Recupera \xE1reas contaminadas lentamente."
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 0
+    happinessBonus: 10
+    foodProductionBonus: 30
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 0
+    resourceBonus: 0
+    revoltChanceBonus: 0
+    resourceConsumptionBonus: 0
+    expansionBonus: -15
+    securityBonus: -10
+    productivityBonus: 0
+    trustBonus: 0
+    eventName: Fertilizante Proibido
+    eventDescription: "Usar qu\xEDmicos para aumentar produ\xE7\xE3o?"
+  - characterName: Dr. Adrian Voss
+    description: "Ele j\xE1 salvou milhares. Agora, precisa escolher quem ainda vale
+      a pena salvar."
+    quote: "N\xE3o posso salvar todos\u2026 ent\xE3o escolho quem vive."
+    portrait: {fileID: 0}
+    specialization: 3
+    passiveName: Triagem Rigorosa
+    passiveDescription: Cura mais eficiente com menos recursos.
+    activeName: "Decis\xE3o Cl\xEDnica"
+    activeDescription: "Salva parte da popula\xE7\xE3o em situa\xE7\xF5es cr\xEDticas."
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 0
+    happinessBonus: -15
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 35
+    explorationSpeedBonus: 0
+    resourceBonus: -20
+    revoltChanceBonus: 0
+    resourceConsumptionBonus: 0
+    expansionBonus: 0
+    securityBonus: 0
+    productivityBonus: 0
+    trustBonus: 0
+    eventName: Quem Vive?
+    eventDescription: Recursos insuficientes para todos.
+  - characterName: Kael Ryn
+    description: "Kael viveu fora dos muros por anos. O desconhecido n\xE3o a assusta
+      \u2014 \xE9 onde ela se sente viva."
+    quote: "O mundo acabou\u2026 mas nunca foi t\xE3o aberto."
+    portrait: {fileID: 0}
+    specialization: 4
+    passiveName: Caminhos Ocultos
+    passiveDescription: "Descobre \xE1reas secretas."
+    activeName: "Expedi\xE7\xE3o R\xE1pida"
+    activeDescription: "Reduz tempo de explora\xE7\xE3o drasticamente."
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 0
+    happinessBonus: 0
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 30
+    resourceBonus: 20
+    revoltChanceBonus: 0
+    resourceConsumptionBonus: 0
+    expansionBonus: 0
+    securityBonus: -15
+    productivityBonus: 0
+    trustBonus: 0
+    eventName: Zona Mortal
+    eventDescription: "Explorar \xE1rea com alt\xEDssimo risco?"
+  - characterName: Drex Morrow
+    description: "Drex nunca confiou em ningu\xE9m \u2014 e sobreviveu por causa
+      disso. Ele v\xEA valor onde os outros veem lixo."
+    quote: "Tudo tem pre\xE7o. Inclusive voc\xEA."
+    portrait: {fileID: 0}
+    specialization: 5
+    passiveName: Barganha Suja
+    passiveDescription: Trocas mais vantajosas.
+    activeName: Estoque Oculto
+    activeDescription: Gera recursos extras temporariamente.
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 0
+    happinessBonus: 0
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 0
+    resourceBonus: 25
+    revoltChanceBonus: 0
+    resourceConsumptionBonus: 0
+    expansionBonus: 0
+    securityBonus: 0
+    productivityBonus: 0
+    trustBonus: -15
+    eventName: "Neg\xF3cio Suspeito"
+    eventDescription: Aceitar troca arriscada?
+  - characterName: Mara Solis
+    description: "Mara mant\xE9m as pessoas unidas quando tudo desmorona. Ela entende
+      que esperan\xE7a tamb\xE9m \xE9 um recurso."
+    quote: "Sem pessoas\u2026 n\xE3o existe cidade."
+    portrait: {fileID: 0}
+    specialization: 6
+    passiveName: "Uni\xE3o Popular"
+    passiveDescription: Aumenta moral geral.
+    activeName: "Festival da Esperan\xE7a"
+    activeDescription: Remove penalidades temporariamente.
+    constructionSpeedBonus: 0
+    materialCostBonus: 0
+    defenseBonus: 0
+    happinessBonus: 30
+    foodProductionBonus: 0
+    medicalEfficiencyBonus: 0
+    explorationSpeedBonus: 0
+    resourceBonus: 0
+    revoltChanceBonus: -20
+    resourceConsumptionBonus: 10
+    expansionBonus: 0
+    securityBonus: 0
+    productivityBonus: -10
+    trustBonus: 0
+    eventName: "\xDAltima Celebra\xE7\xE3o"
+    eventDescription: "Gastar recursos para manter esperan\xE7a?"
