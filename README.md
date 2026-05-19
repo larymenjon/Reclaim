@@ -1,9 +1,7 @@
-<!-- LOGO -->
 <p align="center">
-  <img src="docs/images/logo.png" alt="RECLAIM Logo" width="200"/>
+    <a href="https://ibb.co/WNNpdgtN">
+        <img src="https://i.ibb.co/Y44TKpZ4/29727b9c-3a37-4d24-96f3-89b9d39f9af0-1.png" alt="RECLAIM Banner" border="0" style="max-width: 100%; height: auto;"
 </p>
-
-<h1 align="center">RECLAIM</h1>
 <h3 align="center">Rebuild the World. Survive the Cost.</h3>
 
 <p align="center">
