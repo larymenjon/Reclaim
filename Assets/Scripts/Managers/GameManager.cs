@@ -14,17 +14,19 @@ namespace Reclaim
     public class GameManager : MonoBehaviour
     {
         [Header("Systems")]
-        [SerializeField] private GridManager gridManager;
-        [SerializeField] private PreviewSystem previewSystem;
-        [SerializeField] private InputHandler inputHandler;
-        [SerializeField] private BuildingSystem buildingSystem;
-        [SerializeField] private RoadSystem roadSystem;
-        [SerializeField] private PlacementHistory placementHistory;
+        [SerializeField] private GridManager _gridManager;
+        [SerializeField] private PreviewSystem _previewSystem;
+        [SerializeField] private InputHandler _inputHandler;
+        [SerializeField] private BuildingSystem _buildingSystem;
+        [SerializeField] private PlacementHistory _placementHistory;
+
+        [Header("Road")]
+        [SerializeField] private RoadBuilderManager _roadBuilderManager;
 
         [Header("Startup")]
-        [SerializeField] private GameMode startMode = GameMode.None;
-        [SerializeField] private BuildingData defaultBuilding;
-        [SerializeField] private bool selectDefaultBuildingOnStart = false;
+        [SerializeField] private GameMode _startMode = GameMode.None;
+        [SerializeField] private BuildingData _defaultBuilding;
+        [SerializeField] private bool _selectDefaultBuildingOnStart;
 
         public event Action<GameMode> OnModeChanged;
 
@@ -32,25 +34,27 @@ namespace Reclaim
 
         private void Awake()
         {
-            AutoResolveReferences();
+            ResolveReferences();
 
-            if (inputHandler != null)
+            if (_inputHandler != null)
             {
-                inputHandler.SetGridManager(gridManager);
-                inputHandler.OnUndoPressed += HandleUndoPressed;
+                _inputHandler.SetGridManager(_gridManager);
+                _inputHandler.OnUndoPressed += HandleUndoPressed;
             }
 
-            buildingSystem.Initialize(gridManager, previewSystem, this, placementHistory, inputHandler);
-            roadSystem.Initialize(gridManager, previewSystem, this, placementHistory, inputHandler);
+            if (_buildingSystem != null)
+            {
+                _buildingSystem.Initialize(_gridManager, _previewSystem, this, _placementHistory, _inputHandler);
+            }
         }
 
         private void Start()
         {
-            SetMode(startMode);
+            SetMode(_startMode);
 
-            if (selectDefaultBuildingOnStart && defaultBuilding != null)
+            if (_selectDefaultBuildingOnStart && _defaultBuilding != null && _buildingSystem != null)
             {
-                buildingSystem.SelectBuilding(defaultBuilding);
+                _buildingSystem.SelectBuilding(_defaultBuilding);
             }
         }
 
@@ -59,62 +63,82 @@ namespace Reclaim
             CurrentMode = mode;
             OnModeChanged?.Invoke(CurrentMode);
 
-            if (mode == GameMode.None)
+            if (mode != GameMode.Build && _previewSystem != null)
             {
-                previewSystem.ClearPreview();
+                _previewSystem.ClearPreview();
             }
         }
 
         public void EnterBuildMode(BuildingData buildingData)
         {
-            if (buildingData != null)
+            if (buildingData != null && _buildingSystem != null)
             {
-                buildingSystem.SelectBuilding(buildingData);
+                _buildingSystem.SelectBuilding(buildingData);
             }
 
             SetMode(GameMode.Build);
         }
 
-        // UnityEvent-safe overload for buttons configured with Object arguments.
         public void EnterBuildMode(UnityEngine.Object buildingAsset)
         {
             EnterBuildMode(buildingAsset as BuildingData);
         }
 
-        public void EnterRoadMode()
-        {
-            SetMode(GameMode.Road);
-        }
-
-        public void EnterIdleMode()
-        {
-            SetMode(GameMode.None);
-        }
-
         public void SelectBuildingForUI(BuildingData buildingData)
         {
-            buildingSystem.SelectBuilding(buildingData);
+            if (_buildingSystem != null)
+            {
+                _buildingSystem.SelectBuilding(buildingData);
+            }
         }
 
-        // UnityEvent-safe overload for buttons configured with Object arguments.
         public void SelectBuildingForUI(UnityEngine.Object buildingAsset)
         {
             SelectBuildingForUI(buildingAsset as BuildingData);
         }
 
-        private void HandleUndoPressed()
+        public void EnterRoadMode()
         {
-            placementHistory.UndoLast();
+            SetMode(GameMode.Road);
+            EnsureRoadBuilderManager();
+
+            if (_roadBuilderManager != null && !_roadBuilderManager.IsBuilding)
+            {
+                _roadBuilderManager.StartBuildMode();
+            }
         }
 
-        private void AutoResolveReferences()
+        public void EnterIdleMode()
         {
-            if (gridManager == null) gridManager = FindFirstObjectByType<GridManager>();
-            if (previewSystem == null) previewSystem = FindFirstObjectByType<PreviewSystem>();
-            if (inputHandler == null) inputHandler = FindFirstObjectByType<InputHandler>();
-            if (buildingSystem == null) buildingSystem = FindFirstObjectByType<BuildingSystem>();
-            if (roadSystem == null) roadSystem = FindFirstObjectByType<RoadSystem>();
-            if (placementHistory == null) placementHistory = FindFirstObjectByType<PlacementHistory>();
+            if (_roadBuilderManager != null && _roadBuilderManager.IsBuilding)
+            {
+                _roadBuilderManager.ExitBuildMode();
+            }
+
+            SetMode(GameMode.None);
+        }
+
+        private void HandleUndoPressed()
+        {
+            if (CurrentMode != GameMode.Road && _placementHistory != null)
+            {
+                _placementHistory.UndoLast();
+            }
+        }
+
+        private void ResolveReferences()
+        {
+            _gridManager ??= FindFirstObjectByType<GridManager>();
+            _previewSystem ??= FindFirstObjectByType<PreviewSystem>();
+            _inputHandler ??= FindFirstObjectByType<InputHandler>();
+            _buildingSystem ??= FindFirstObjectByType<BuildingSystem>();
+            _placementHistory ??= FindFirstObjectByType<PlacementHistory>();
+            _roadBuilderManager ??= FindFirstObjectByType<RoadBuilderManager>();
+        }
+
+        private void EnsureRoadBuilderManager()
+        {
+            _roadBuilderManager ??= FindFirstObjectByType<RoadBuilderManager>();
         }
     }
 }

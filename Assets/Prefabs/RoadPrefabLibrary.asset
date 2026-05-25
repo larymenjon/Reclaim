@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f66a2bf53e843c84081210c1ca679c56, type: 3}
+  m_Name: RoadPrefabLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Road.RoadPrefabLibrary
+  straightPrefab: {fileID: 3681969410278863771, guid: 80a5248705fe0354bacbfdb82e93bb86, type: 3}
+  curvePrefab: {fileID: 296266804738181655, guid: cae90ff87a52a2648b9872ed2fe45a23, type: 3}
+  tJunctionPrefab: {fileID: 1171791741232982322, guid: 00c3967ebc1c2344e853ffb0ed52a0f1, type: 3}
+  xJunctionPrefab: {fileID: 7749215491361491673, guid: 46a38a5b32bc6144aade7ac96e37c400, type: 3}
+  endCapPrefab: {fileID: 2045788721675742001, guid: 07bfdb01727b5d444ae2fc86c5a55502, type: 3}
+  previewValidMaterial: {fileID: 0}
+  previewInvalidMaterial: {fileID: 0}
+  segmentLength: 4
+  roadWidth: 2
+  snapRadius: 1.5
+  minPointDistance: 2
+  straightAngleThreshold: 20
