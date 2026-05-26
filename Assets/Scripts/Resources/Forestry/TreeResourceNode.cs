@@ -24,6 +24,7 @@ namespace Reclaim.Resources.Forestry
         public TreeLifecycleState State { get; private set; } = TreeLifecycleState.Standing;
         public bool IsBusy { get; private set; }
         public bool IsHarvestable => State == TreeLifecycleState.Standing && !IsBusy;
+        private TreeForestrySystem _forestrySystem;
 
         public bool TryHarvest(TreeForestrySystem forestrySystem)
         {
@@ -43,16 +44,24 @@ namespace Reclaim.Resources.Forestry
 
         public bool TryClearForConstruction(TreeForestrySystem forestrySystem)
         {
-            if (!IsHarvestable || forestrySystem == null)
+            if (State == TreeLifecycleState.Chopped || forestrySystem == null)
             {
                 return false;
             }
 
+            bool hadBusyWorker = IsBusy;
             StopAllCoroutines();
             IsBusy = false;
+
+            if (hadBusyWorker)
+            {
+                forestrySystem.ReleaseWorker();
+            }
+
             State = TreeLifecycleState.Chopped;
             ApplyStateVisual();
             forestrySystem.AddWood(woodYield, transform.position);
+            _forestrySystem = null;
             return true;
         }
 
@@ -64,6 +73,7 @@ namespace Reclaim.Resources.Forestry
 
         private IEnumerator HarvestRoutine(TreeForestrySystem forestrySystem)
         {
+            _forestrySystem = forestrySystem;
             IsBusy = true;
             yield return new WaitForSeconds(chopDurationSeconds);
 
@@ -71,6 +81,7 @@ namespace Reclaim.Resources.Forestry
             ApplyStateVisual();
             forestrySystem.AddWood(woodYield, transform.position);
             forestrySystem.ReleaseWorker();
+            IsBusy = false;
 
             yield return new WaitForSeconds(regrowDelaySeconds);
             State = TreeLifecycleState.Growing;
@@ -79,7 +90,15 @@ namespace Reclaim.Resources.Forestry
             yield return new WaitForSeconds(growDurationSeconds);
             State = TreeLifecycleState.Standing;
             ApplyStateVisual();
-            IsBusy = false;
+            _forestrySystem = null;
+        }
+
+        private void OnDestroy()
+        {
+            if (IsBusy && _forestrySystem != null)
+            {
+                _forestrySystem.ReleaseWorker();
+            }
         }
 
         private void ApplyStateVisual()

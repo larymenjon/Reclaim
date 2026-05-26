@@ -5,108 +5,99 @@ using UnityEngine.UI;
 namespace Reclaim.Road
 {
     /// <summary>
-    /// Botão de confirmação (martelo) em World Space que aparece perto da estrada.
-    ///
-    /// Setup:
-    ///  1. Crie um Canvas (World Space), desative-o → referencie em confirmCanvas.
-    ///  2. Adicione um Button dentro com ícone de martelo → referencie em confirmButton.
-    ///  3. Adicione este script no mesmo objeto do Canvas (ou num manager).
+    /// Botao de confirmacao (martelo) em Screen Space Overlay.
+    /// Segue a posicao do ultimo ponto projetada na tela.
     /// </summary>
     public class ConfirmBuildUI : MonoBehaviour
     {
+        [Header("Referencias")]
         [SerializeField] private Canvas confirmCanvas;
         [SerializeField] private Button confirmButton;
-        [SerializeField] private GameObject confirmRoot;
+        [SerializeField] private RectTransform buttonRect;
 
-        [Tooltip("Offset vertical acima da posição alvo.")]
-        [SerializeField] private Vector3 worldOffset = new(0f, 2.5f, 0f);
+        [Header("Posicionamento")]
+        [Tooltip("Offset em pixels acima do ponto projetado na tela.")]
+        [SerializeField] private Vector2 screenOffset = new(0f, 60f);
 
-        [Tooltip("Escala do Canvas no mundo.")]
-        [SerializeField] private float canvasScale = 0.01f;
+        private Action _onConfirm;
+        private Vector3 _worldTarget;
+        private Camera _cam;
 
-        private Action   _onConfirm;
-        private Vector3  _targetPos;
-        private Camera   _cam;
-
-        public bool IsVisible => GetVisibilityTarget() != null && GetVisibilityTarget().activeSelf;
-
-        // ── Unity ────────────────────────────────────────────────────
+        public bool IsVisible => confirmButton != null
+            ? confirmButton.gameObject.activeSelf
+            : confirmCanvas != null && confirmCanvas.gameObject.activeSelf;
 
         private void Awake()
         {
             _cam = Camera.main;
 
-            if (confirmRoot == null && confirmButton != null)
-            {
-                confirmRoot = confirmButton.gameObject;
-            }
-
             if (confirmCanvas != null)
-            {
-                confirmCanvas.worldCamera = _cam;
-                confirmCanvas.transform.localScale = Vector3.one * canvasScale;
-            }
+                confirmCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
             if (confirmButton != null)
                 confirmButton.onClick.AddListener(OnButtonClicked);
+
+            if (buttonRect == null && confirmButton != null)
+                buttonRect = confirmButton.GetComponent<RectTransform>();
 
             Hide();
         }
 
         private void LateUpdate()
         {
-            if (!IsVisible || _cam == null) return;
+            if (!IsVisible || _cam == null || buttonRect == null)
+                return;
 
-            confirmCanvas.transform.position = _targetPos + worldOffset;
+            Vector3 screenPos = _cam.WorldToScreenPoint(_worldTarget);
 
-            Vector3 dir = confirmCanvas.transform.position - _cam.transform.position;
-            if (dir != Vector3.zero)
-                confirmCanvas.transform.rotation = Quaternion.LookRotation(dir);
+            if (screenPos.z < 0f)
+            {
+                SetConfirmVisible(false);
+                return;
+            }
+
+            SetConfirmVisible(true);
+            buttonRect.position = new Vector2(screenPos.x, screenPos.y) + screenOffset;
         }
-
-        // ── Public API ────────────────────────────────────────────────
 
         public void Show(Vector3 worldPos, Action onConfirm)
         {
-            _targetPos = worldPos;
+            _worldTarget = worldPos;
             _onConfirm = onConfirm;
-            SetVisible(true);
+
+            SetConfirmVisible(true);
+            Debug.Log($"[ConfirmUI] Botao exibido em mundo={worldPos}");
         }
 
-        public void UpdatePosition(Vector3 worldPos) => _targetPos = worldPos;
+        public void UpdatePosition(Vector3 worldPos)
+        {
+            _worldTarget = worldPos;
+        }
 
         public void Hide()
         {
-            SetVisible(false);
+            SetConfirmVisible(false);
             _onConfirm = null;
         }
 
-        // ── Events ───────────────────────────────────────────────────
-
         private void OnButtonClicked()
         {
+            Debug.Log("[ConfirmUI] Botao clicado - disparando OnConfirm.");
             var cb = _onConfirm;
-            Hide();   // primeiro, para evitar duplo-clique
+            Hide();
             cb?.Invoke();
         }
 
-        private GameObject GetVisibilityTarget()
+        private void SetConfirmVisible(bool visible)
         {
-            if (confirmRoot != null)
+            if (confirmButton != null)
             {
-                return confirmRoot;
+                confirmButton.gameObject.SetActive(visible);
+                return;
             }
 
-            return confirmCanvas != null ? confirmCanvas.gameObject : null;
-        }
-
-        private void SetVisible(bool isVisible)
-        {
-            GameObject target = GetVisibilityTarget();
-            if (target != null)
-            {
-                target.SetActive(isVisible);
-            }
+            if (confirmCanvas != null)
+                confirmCanvas.gameObject.SetActive(visible);
         }
     }
 }

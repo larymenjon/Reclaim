@@ -159,6 +159,34 @@ namespace Reclaim.Grid
             return true;
         }
 
+        public bool IsCellBuildable(GridCoordinate coordinate)
+        {
+            return TryGetCell(coordinate, out GridCellData cell) && !cell.IsOccupied;
+        }
+
+        public List<GridCoordinate> GetAllBuildableCells()
+        {
+            if (_cells == null)
+            {
+                InitializeGrid();
+            }
+
+            List<GridCoordinate> result = new List<GridCoordinate>(gridWidth * gridHeight);
+            for (int x = 0; x < gridWidth; x++)
+            {
+                for (int y = 0; y < gridHeight; y++)
+                {
+                    GridCoordinate coord = new GridCoordinate(x, y);
+                    if (IsCellBuildable(coord))
+                    {
+                        result.Add(coord);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public bool CanPlaceRoad(GridCoordinate coordinate)
         {
             if (!TryGetCell(coordinate, out GridCellData cell))

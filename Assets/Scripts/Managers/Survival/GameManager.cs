@@ -20,13 +20,17 @@ namespace Reclaim.Survival.Managers
 
         [Header("Global State")]
         [SerializeField] private bool failOnZeroPopulation = true;
-        [SerializeField] private bool failOnZeroHope;
+        [SerializeField] private bool failOnZeroFamilies = true;
+        [SerializeField] private bool failOnLowMoraleStreak = true;
+        [SerializeField, Range(0f, 100f)] private float lowMoraleThreshold = 5f;
+        [SerializeField] private int consecutiveLowMoraleDaysToFail = 3;
 
         public event Action<GameStateSnapshot> OnStateUpdated;
         public event Action OnGameOver;
 
         public GameStateSnapshot CurrentSnapshot { get; private set; }
         public bool IsGameOver { get; private set; }
+        private int _lowMoraleDayStreak;
 
         private void Awake()
         {
@@ -72,7 +76,7 @@ namespace Reclaim.Survival.Managers
 
             eventManager.ProcessTick(context, CurrentSnapshot);
 
-            EvaluateFailState();
+            EvaluateFailState(context);
         }
 
         private GameStateSnapshot BuildSnapshot(int tickIndex, float temperatureCelsius)
@@ -90,11 +94,21 @@ namespace Reclaim.Survival.Managers
             );
         }
 
-        private void EvaluateFailState()
+        private void EvaluateFailState(TickContext context)
         {
             bool failedPopulation = failOnZeroPopulation && familyManager.TotalPopulation <= 0;
-            bool failedHope = failOnZeroHope && moraleSystem.GlobalHope <= 0f;
-            if (!failedPopulation && !failedHope)
+            bool failedFamilies = failOnZeroFamilies && familyManager.FamilyCount <= 0;
+
+            if (context.DayProgress01 < 0.01f)
+            {
+                bool lowMoraleToday = familyManager.GetAverageMorale() <= lowMoraleThreshold;
+                _lowMoraleDayStreak = lowMoraleToday ? _lowMoraleDayStreak + 1 : 0;
+            }
+
+            bool failedLowMoraleStreak = failOnLowMoraleStreak
+                                         && _lowMoraleDayStreak >= Mathf.Max(1, consecutiveLowMoraleDaysToFail);
+
+            if (!failedPopulation && !failedFamilies && !failedLowMoraleStreak)
             {
                 return;
             }

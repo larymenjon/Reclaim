@@ -4,16 +4,16 @@ using UnityEngine;
 namespace Reclaim.Road
 {
     /// <summary>
-    /// Exibe o preview da estrada enquanto o jogador desenha.
-    /// Requer um LineRenderer no mesmo GameObject.
+    /// Preview visual da estrada em construção usando LineRenderer.
+    /// Usa RoadSettings em vez de RoadPrefabLibrary.
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
     public class RoadPreviewController : MonoBehaviour
     {
-        [SerializeField] private RoadPrefabLibrary prefabLibrary;
+        [SerializeField] private RoadSettings      settings;
         [SerializeField] private GameObject        waypointMarkerPrefab;
 
-        private LineRenderer        _line;
+        private LineRenderer            _line;
         private readonly List<GameObject> _markers = new();
 
         // ── Unity ────────────────────────────────────────────────────
@@ -21,47 +21,35 @@ namespace Reclaim.Road
         private void Awake()
         {
             _line = GetComponent<LineRenderer>();
-            ConfigureLine();
+            if (settings != null) ApplySettings();
             SetVisible(false);
         }
 
-        private void ConfigureLine()
+        // ── API Pública ───────────────────────────────────────────────
+
+        public void Initialize(RoadSettings s)
         {
-            _line.useWorldSpace     = true;
-            _line.startWidth        = prefabLibrary != null ? prefabLibrary.roadWidth : 2f;
-            _line.endWidth          = _line.startWidth;
-            _line.positionCount     = 0;
-            _line.numCornerVertices = 4;
-            _line.numCapVertices    = 4;
-
-            if (prefabLibrary?.previewValidMaterial != null)
-                _line.material = prefabLibrary.previewValidMaterial;
-        }
-
-        // ── Public API ────────────────────────────────────────────────
-
-        public void Initialize(RoadPrefabLibrary library)
-        {
-            prefabLibrary = library;
-            ConfigureLine();
+            settings = s;
+            ApplySettings();
         }
 
         /// <summary>
-        /// Atualiza o preview.
+        /// Atualiza o preview. allPoints = pontos confirmados + cursor.
         /// </summary>
-        /// <param name="allPoints">Pontos confirmados + posição atual do cursor.</param>
-        /// <param name="confirmedCount">Quantos pontos foram confirmados (recebem marcador).</param>
-        /// <param name="valid">Se a posição do cursor é válida para colocação.</param>
         public void UpdatePreview(IReadOnlyList<Vector3> allPoints, int confirmedCount, bool valid)
         {
-            // LineRenderer
-            _line.positionCount = allPoints.Count;
-            for (int i = 0; i < allPoints.Count; i++)
-                _line.SetPosition(i, allPoints[i] + Vector3.up * 0.05f);
+            // Suaviza o preview com spline se houver pontos suficientes
+            IReadOnlyList<Vector3> displayPts = allPoints.Count >= 2
+                ? RoadSpline.BuildSpline(allPoints, settings != null ? settings.resolutionPerMeter : 3f)
+                : allPoints;
+
+            _line.positionCount = displayPts.Count;
+            for (int i = 0; i < displayPts.Count; i++)
+                _line.SetPosition(i, displayPts[i] + Vector3.up * 0.05f);
 
             Color c = valid
-                ? new Color(0.2f, 1f, 0.2f, 0.75f)
-                : new Color(1f, 0.2f, 0.2f, 0.75f);
+                ? new Color(0.95f, 0.75f, 0.4f, 0.8f)   // areia/terra quente
+                : new Color(1f, 0.2f, 0.2f, 0.75f);      // vermelho = inválido
             _line.startColor = _line.endColor = c;
 
             SyncMarkers(allPoints, confirmedCount);
@@ -78,15 +66,24 @@ namespace Reclaim.Road
 
         // ── Internals ─────────────────────────────────────────────────
 
-        private void SetVisible(bool visible) => _line.enabled = visible;
+        private void ApplySettings()
+        {
+            _line.useWorldSpace     = true;
+            _line.startWidth        = settings.previewWidth;
+            _line.endWidth          = settings.previewWidth;
+            _line.numCornerVertices = 5;
+            _line.numCapVertices    = 5;
+            if (settings.previewMaterial != null)
+                _line.material = settings.previewMaterial;
+        }
+
+        private void SetVisible(bool v) => _line.enabled = v;
 
         private void SyncMarkers(IReadOnlyList<Vector3> allPoints, int confirmedCount)
         {
             int needed = Mathf.Max(0, confirmedCount);
 
-            while (_markers.Count < needed)
-                _markers.Add(CreateMarker());
-
+            while (_markers.Count < needed)  _markers.Add(CreateMarker());
             while (_markers.Count > needed)
             {
                 Destroy(_markers[^1]);
@@ -94,19 +91,18 @@ namespace Reclaim.Road
             }
 
             for (int i = 0; i < needed && i < allPoints.Count; i++)
-                _markers[i].transform.position = allPoints[i] + Vector3.up * 0.1f;
+                _markers[i].transform.position = allPoints[i] + Vector3.up * 0.15f;
         }
 
         private GameObject CreateMarker()
         {
-            if (waypointMarkerPrefab != null)
-                return Instantiate(waypointMarkerPrefab);
+            if (waypointMarkerPrefab != null) return Instantiate(waypointMarkerPrefab);
 
-            // Fallback: esfera amarela
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.transform.localScale = Vector3.one * 0.4f;
+            go.transform.localScale = Vector3.one * 0.35f;
             Destroy(go.GetComponent<Collider>());
-            var mat = new Material(Shader.Find("Standard")) { color = new Color(1f, 0.85f, 0f) };
+            var mat = new Material(Shader.Find("Standard"))
+                { color = new Color(0.95f, 0.75f, 0.3f) };
             go.GetComponent<Renderer>().material = mat;
             return go;
         }

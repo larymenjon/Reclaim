@@ -17,8 +17,8 @@ MonoBehaviour:
   tJunctionPrefab: {fileID: 1171791741232982322, guid: 00c3967ebc1c2344e853ffb0ed52a0f1, type: 3}
   xJunctionPrefab: {fileID: 7749215491361491673, guid: 46a38a5b32bc6144aade7ac96e37c400, type: 3}
   endCapPrefab: {fileID: 2045788721675742001, guid: 07bfdb01727b5d444ae2fc86c5a55502, type: 3}
-  previewValidMaterial: {fileID: 0}
-  previewInvalidMaterial: {fileID: 0}
+  previewValidMaterial: {fileID: 2100000, guid: 891e5785ae6d254488c723ddc92dbb6a, type: 2}
+  previewInvalidMaterial: {fileID: 2100000, guid: 4765d3541e6e73b42b3258ec9143eaec, type: 2}
   segmentLength: 4
   roadWidth: 2
   snapRadius: 1.5

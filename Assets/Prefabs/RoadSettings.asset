@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7211a08c6bfae8c4690cdc60a4475e6b, type: 3}
+  m_Name: RoadSettings
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Road.RoadSettings
+  roadMaterial: {fileID: 2100000, guid: 548414c26b43bd649acc207e2b9f064c, type: 2}
+  roadWidth: 3
+  resolutionPerMeter: 3
+  verticalOffset: 0.02
+  crossSectionVerts: 5
+  centerDepression: 0.08
+  snapRadius: 1.5
+  minPointDistance: 2
+  previewMaterial: {fileID: 0}
+  previewWidth: 3
+  terrainLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  terrainSampleHeight: 50
