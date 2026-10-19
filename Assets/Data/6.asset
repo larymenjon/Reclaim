@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 6
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: Aris
   description: "Aris entende que o medo mata mais r\xE1pido que a fome. Ela \xE9
     a cola que mant\xE9m as fam\xEDlias unidas quando tudo desmorona."
@@ -21,3 +21,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 6
+  passiveName: "União Popular"
+  passiveDescription: "Aumenta moral geral."
+  activeName: "Festival da Esperança"
+  activeDescription: "Remove penalidades temporariamente."
+  activeCooldownDays: 10
+  dilemmaName: "Última Celebração"
+  dilemmaDescription: "Gastar recursos para manter esperança?"

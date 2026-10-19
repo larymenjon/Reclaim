@@ -1,5 +1,5 @@
-using Reclaim.Building;
-using Reclaim.Managers;
+using Reclaim.Construction;
+using Reclaim.Gameplay;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -28,7 +28,7 @@ namespace Reclaim.UI.Bottom
 
             if (buildHudController == null)
             {
-                buildHudController = FindFirstObjectByType<BuildHudController>();
+                Debug.LogError("[BuildingMenuItemButton] BuildHudController não configurado.", this);
             }
         }
 

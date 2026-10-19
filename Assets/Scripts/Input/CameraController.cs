@@ -1,16 +1,19 @@
-﻿using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
+using UnityEngine;
 using UnityEngine.InputSystem;
-#endif
 
 namespace Reclaim.Input
 {
+    /// <summary>
+    /// Câmera de estratégia: WASD e borda da tela movem, Q/E e botão do meio giram,
+    /// roda do mouse dá zoom com inclinação automática. Respeita os limites do terreno.
+    /// Usa tempo não escalado para continuar funcionando com o jogo pausado.
+    /// </summary>
     [DisallowMultipleComponent]
     public class CameraController : MonoBehaviour
     {
         [Header("Rig References")]
         [SerializeField] private Transform cameraPivot;
-        [SerializeField] private UnityEngine.Camera targetCamera;
+        [SerializeField] private Camera targetCamera;
 
         [Header("Planar Movement")]
         [SerializeField] private float moveSensitivity = 50f;
@@ -64,6 +67,15 @@ namespace Reclaim.Input
         [SerializeField] private Vector2 minBounds = new Vector2(-100f, -100f);
         [SerializeField] private Vector2 maxBounds = new Vector2(100f, 100f);
 
+        private static readonly Vector3[] ViewportCorners =
+        {
+            new Vector3(0f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(0f, 1f, 0f),
+            new Vector3(1f, 1f, 0f)
+        };
+
+        private readonly Vector3[] _viewCornerHits = new Vector3[4];
         private Vector3 _targetRigPosition;
         private Vector3 _currentRigPosition;
         private Vector3 _currentPlanarVelocity;
@@ -80,7 +92,6 @@ namespace Reclaim.Input
         private float _zoomDistanceVelocity;
         private float _zoomSpeed;
         private bool _useOrbitCameraMode;
-        private float _cameraHeightVelocity;
 
         private void Awake()
         {
@@ -109,7 +120,7 @@ namespace Reclaim.Input
 
         private void Update()
         {
-            float dt = Time.deltaTime;
+            float dt = UnityEngine.Time.unscaledDeltaTime;
             ProcessMovement(dt);
             ProcessRotation(dt);
             ProcessZoom(dt);
@@ -162,7 +173,7 @@ namespace Reclaim.Input
         private void ProcessRotation(float deltaTime)
         {
             float yawDelta = 0f;
-            if (enableMiddleMouseOrbit && IsMiddleMouseHeld()) yawDelta += GetMouseDelta().x * yawSensitivity * deltaTime;
+            if (enableMiddleMouseOrbit && PointerInput.MiddleHeld) yawDelta += PointerInput.Delta.x * yawSensitivity * deltaTime;
             if (enableKeyboardRotation) yawDelta += GetKeyboardYawInput() * keyboardYawSensitivity * deltaTime;
 
             _targetYaw += yawDelta;
@@ -194,9 +205,9 @@ namespace Reclaim.Input
         private void ApplySmoothedState(float deltaTime)
         {
             _currentRigPosition = Vector3.Lerp(_currentRigPosition, _targetRigPosition, 1f - Mathf.Exp(-12f * deltaTime));
-            _currentYaw = Mathf.SmoothDampAngle(_currentYaw, _targetYaw, ref _yawVelocity, rotationSmoothTime);
-            _currentPitch = Mathf.SmoothDampAngle(_currentPitch, _targetPitch, ref _pitchVelocity, rotationSmoothTime);
-            _currentZoomDistance = Mathf.SmoothDamp(_currentZoomDistance, _targetZoomDistance, ref _zoomDistanceVelocity, zoomSmoothTime);
+            _currentYaw = Mathf.SmoothDampAngle(_currentYaw, _targetYaw, ref _yawVelocity, rotationSmoothTime, Mathf.Infinity, deltaTime);
+            _currentPitch = Mathf.SmoothDampAngle(_currentPitch, _targetPitch, ref _pitchVelocity, rotationSmoothTime, Mathf.Infinity, deltaTime);
+            _currentZoomDistance = Mathf.SmoothDamp(_currentZoomDistance, _targetZoomDistance, ref _zoomDistanceVelocity, zoomSmoothTime, Mathf.Infinity, deltaTime);
 
             if (_useOrbitCameraMode)
             {
@@ -301,47 +312,29 @@ namespace Reclaim.Input
             }
         }
 
-        private Vector2 GetMoveInput()
+        private static Vector2 GetMoveInput()
         {
-            Vector2 res = Vector2.zero;
-#if ENABLE_INPUT_SYSTEM
-            var k = Keyboard.current;
-            if (k != null)
-            {
-                if (k.wKey.isPressed) res.y += 1;
-                if (k.sKey.isPressed) res.y -= 1;
-                if (k.dKey.isPressed) res.x += 1;
-                if (k.aKey.isPressed) res.x -= 1;
-            }
-#else
-            res.x = UnityEngine.Input.GetAxisRaw("Horizontal");
-            res.y = UnityEngine.Input.GetAxisRaw("Vertical");
-#endif
-            return res;
+            Vector2 input = Vector2.zero;
+            if (PointerInput.KeyHeld(Key.W)) input.y += 1f;
+            if (PointerInput.KeyHeld(Key.S)) input.y -= 1f;
+            if (PointerInput.KeyHeld(Key.D)) input.x += 1f;
+            if (PointerInput.KeyHeld(Key.A)) input.x -= 1f;
+            return input;
         }
 
-        private float GetScrollDeltaNormalized()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null ? Mouse.current.scroll.ReadValue().y * 0.01f : 0f;
-#else
-            return UnityEngine.Input.GetAxis("Mouse ScrollWheel");
-#endif
-        }
+        // O Input System entrega a roda em passos grandes; 0.01 mantém a sensibilidade original do projeto.
+        private static float GetScrollDeltaNormalized() => PointerInput.ScrollY * 0.01f;
 
         private Vector2 GetEdgeScrollInput()
         {
-            Vector2 mouse = GetMousePosition();
-            Vector2 res = Vector2.zero;
+            Vector2 mouse = PointerInput.Position;
 
             float left = GetEdgeFactor(mouse.x, edgeSizePixels);
             float right = GetEdgeFactor(Screen.width - mouse.x, edgeSizePixels);
             float bottom = GetEdgeFactor(mouse.y, edgeSizePixels);
             float top = GetEdgeFactor(Screen.height - mouse.y, edgeSizePixels);
 
-            res.x = right - left;
-            res.y = top - bottom;
-            return res * (edgeScrollSensitivity / moveSensitivity);
+            return new Vector2(right - left, top - bottom) * (edgeScrollSensitivity / moveSensitivity);
         }
 
         private float GetEdgeFactor(float distanceToEdge, float threshold)
@@ -355,41 +348,16 @@ namespace Reclaim.Input
             return Mathf.Pow(t, edgeRampExponent);
         }
 
-        private Vector2 GetMousePosition() =>
-#if ENABLE_INPUT_SYSTEM
-            Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-#else
-            UnityEngine.Input.mousePosition;
-#endif
-
-        private Vector2 GetMouseDelta() =>
-#if ENABLE_INPUT_SYSTEM
-            Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
-#else
-            new Vector2(UnityEngine.Input.GetAxis("Mouse X"), UnityEngine.Input.GetAxis("Mouse Y"));
-#endif
-
-        private bool IsMiddleMouseHeld() =>
-#if ENABLE_INPUT_SYSTEM
-            Mouse.current != null && Mouse.current.middleButton.isPressed;
-#else
-            UnityEngine.Input.GetMouseButton(2);
-#endif
-
-        private float GetKeyboardYawInput()
+        private static float GetKeyboardYawInput()
         {
-#if ENABLE_INPUT_SYSTEM
-            var k = Keyboard.current;
-            return k != null ? (k.qKey.isPressed ? -1 : (k.eKey.isPressed ? 1 : 0)) : 0;
-#else
-            return UnityEngine.Input.GetKey(KeyCode.Q) ? -1 : (UnityEngine.Input.GetKey(KeyCode.E) ? 1 : 0);
-#endif
+            if (PointerInput.KeyHeld(Key.Q)) return -1f;
+            return PointerInput.KeyHeld(Key.E) ? 1f : 0f;
         }
 
         private bool TryGetMouseGroundPoint(out Vector3 point)
         {
             point = Vector3.zero;
-            Ray ray = targetCamera.ScreenPointToRay(GetMousePosition());
+            Ray ray = targetCamera.ScreenPointToRay(PointerInput.Position);
             if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundRaycastMask))
             {
                 point = hit.point;
@@ -400,7 +368,7 @@ namespace Reclaim.Input
 
         private void ResolveTerrainReference()
         {
-            if (mapTerrain == null) mapTerrain = FindFirstObjectByType<Terrain>();
+            if (mapTerrain == null) mapTerrain = FindAnyObjectByType<Terrain>();
         }
 
         private void RefreshBoundsFromSurface()
@@ -424,25 +392,18 @@ namespace Reclaim.Input
             }
 
             Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, fallbackGroundHeight, 0f));
-            Vector3[] hits = new Vector3[4];
-            Vector2[] corners =
+            for (int i = 0; i < ViewportCorners.Length; i++)
             {
-                new Vector2(0f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(1f, 1f)
-            };
-
-            for (int i = 0; i < corners.Length; i++)
-            {
-                Ray ray = targetCamera.ViewportPointToRay(new Vector3(corners[i].x, corners[i].y, 0f));
+                Ray ray = targetCamera.ViewportPointToRay(ViewportCorners[i]);
                 if (!groundPlane.Raycast(ray, out float enter))
                 {
                     return false;
                 }
 
-                hits[i] = ray.GetPoint(enter);
+                _viewCornerHits[i] = ray.GetPoint(enter);
             }
+
+            Vector3[] hits = _viewCornerHits;
 
             float minX = hits[0].x;
             float maxX = hits[0].x;

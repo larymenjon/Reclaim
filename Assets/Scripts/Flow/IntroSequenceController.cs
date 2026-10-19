@@ -1,16 +1,14 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Video;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using Reclaim.Input;
 
 namespace Reclaim.Flow
 {
     /// <summary>
-    /// Plays studio logo objects followed by an optional intro video.
+    /// Mostra os logos do estúdio e o vídeo de abertura, depois carrega o Menu. Qualquer tecla pula.
     /// </summary>
     public class IntroSequenceController : MonoBehaviour
     {
@@ -133,7 +131,7 @@ namespace Reclaim.Flow
         {
             if (introVideoPlayer == null)
             {
-                introVideoPlayer = FindFirstObjectByType<VideoPlayer>();
+                introVideoPlayer = GetComponentInChildren<VideoPlayer>();
             }
 
             if (introVideoPlayer == null)
@@ -219,23 +217,7 @@ namespace Reclaim.Flow
             SceneManager.LoadScene(menuSceneName);
         }
 
-        private static bool HasSkipInput()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
-            {
-                return true;
-            }
-
-            if (Mouse.current != null)
-            {
-                return Mouse.current.leftButton.wasPressedThisFrame ||
-                       Mouse.current.rightButton.wasPressedThisFrame;
-            }
-#endif
-
-            return UnityEngine.Input.anyKeyDown;
-        }
+        private static bool HasSkipInput() => PointerInput.AnyButtonOrKeyPressedThisFrame;
     }
 }
 

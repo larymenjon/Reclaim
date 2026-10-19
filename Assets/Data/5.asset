@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 5
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: Jax
   description: "Para Jax, o apocalipse \xE9 a maior \"queima de estoque\" da hist\xF3ria.
     Ele encontra utilidade em pe\xE7as que outros chamariam de lixo.\n\nGanha mais
@@ -22,3 +22,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 5
+  passiveName: "Barganha Suja"
+  passiveDescription: "Trocas mais vantajosas."
+  activeName: "Estoque Oculto"
+  activeDescription: "Gera recursos extras temporariamente."
+  activeCooldownDays: 10
+  dilemmaName: "Negócio Suspeito"
+  dilemmaDescription: "Aceitar troca arriscada?"

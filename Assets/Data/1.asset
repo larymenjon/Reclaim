@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 1
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: Helena Kravik
   description: "Elena v\xEA o mundo como um conjunto de engrenagens quebradas. Ela
     n\xE3o acredita em milagres, apenas em funda\xE7\xF5es s\xF3lidas e a\xE7o refor\xE7ado. 
@@ -23,3 +23,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 10
   startingScrap: 100
+  specialization: 0
+  passiveName: "Eficiência Brutal"
+  passiveDescription: "Construções são concluídas mais rápido."
+  activeName: "Improvisação Estrutural"
+  activeDescription: "Permite construir sem todos os recursos necessários (qualidade reduzida)."
+  activeCooldownDays: 10
+  dilemmaName: "Cortar Custos"
+  dilemmaDescription: "Usar materiais inferiores para acelerar expansão?"
