@@ -1,21 +1,29 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Reclaim.Construction
 {
-    /// <summary>Barra de progresso no mundo, exibida enquanto a construção está em obra.</summary>
+    /// <summary>
+    /// Barra de progresso sobre a obra com os segundos que faltam.
+    /// Tem tamanho constante na tela, em qualquer zoom, e some quando a construção termina.
+    /// </summary>
     [DisallowMultipleComponent]
     public class BuildingConstructionProgressUI : MonoBehaviour
     {
-        [SerializeField] private Vector3 worldOffset = new Vector3(0f, 2.5f, 0f);
-        [SerializeField, Min(0.1f)] private float canvasScale = 0.01f;
-        [SerializeField] private bool hideOnComplete = true;
+        private static readonly Vector2 CanvasSize = new Vector2(220f, 44f);
+
+        [SerializeField, Min(0f)] private float heightMargin = 0.8f;
+        [SerializeField, Min(0f)] private float minimumHeight = 2f;
+        [Tooltip("Largura aproximada da barra na tela, em pixels.")]
+        [SerializeField, Min(20f)] private float widthOnScreen = 150f;
 
         private Building _building;
         private Canvas _canvas;
-        private Slider _slider;
         private Image _fillImage;
-        private Camera _targetCamera;
+        private RectTransform _fillRect;
+        private TMP_Text _label;
+        private Camera _camera;
 
         private void Awake()
         {
@@ -27,6 +35,7 @@ namespace Reclaim.Construction
             }
 
             CreateUi();
+            Refresh(_building.ConstructionProgress01);
         }
 
         private void OnEnable()
@@ -34,8 +43,6 @@ namespace Reclaim.Construction
             if (_building != null)
             {
                 _building.OnConstructionProgressChanged += HandleProgressChanged;
-                _building.OnConstructionCompleted += HandleCompleted;
-                HandleProgressChanged(_building, _building.ConstructionProgress01);
             }
         }
 
@@ -44,50 +51,71 @@ namespace Reclaim.Construction
             if (_building != null)
             {
                 _building.OnConstructionProgressChanged -= HandleProgressChanged;
-                _building.OnConstructionCompleted -= HandleCompleted;
             }
         }
 
         private void LateUpdate()
+        {
+            if (_canvas == null || !_canvas.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+                if (_camera == null)
+                {
+                    return;
+                }
+            }
+
+            Transform canvasTransform = _canvas.transform;
+            float height = Mathf.Max(minimumHeight, _building.VisualHeight + heightMargin);
+            canvasTransform.position = transform.position + Vector3.up * height;
+            canvasTransform.rotation = _camera.transform.rotation;
+            canvasTransform.localScale = Vector3.one * ScaleForConstantScreenSize();
+        }
+
+        private void HandleProgressChanged(Building building, float progress01)
+        {
+            Refresh(progress01);
+        }
+
+        private void Refresh(float progress01)
         {
             if (_canvas == null)
             {
                 return;
             }
 
-            if (_targetCamera == null)
-            {
-                _targetCamera = Camera.main;
-            }
-
-            _canvas.transform.position = transform.position + worldOffset;
-            if (_targetCamera != null)
-            {
-                _canvas.transform.forward = _targetCamera.transform.forward;
-            }
-        }
-
-        private void HandleProgressChanged(Building building, float progress01)
-        {
-            if (_slider == null)
+            bool inProgress = progress01 < 1f && !_building.IsConstructionComplete;
+            _canvas.gameObject.SetActive(inProgress);
+            if (!inProgress)
             {
                 return;
             }
 
-            _slider.value = Mathf.Clamp01(progress01);
-            UpdateFillColor(progress01);
-            if (_canvas != null)
-            {
-                _canvas.gameObject.SetActive(!building.IsConstructionComplete || !hideOnComplete);
-            }
+            _fillRect.anchorMax = new Vector2(Mathf.Clamp01(progress01), 1f);
+            _fillImage.color = ColorFor(progress01);
+            _label.text = $"{Mathf.CeilToInt(_building.ConstructionSecondsRemaining)} s";
         }
 
-        private void HandleCompleted(Building building)
+        /// <summary>Escala do canvas para a barra ocupar sempre ~widthOnScreen pixels, perto ou longe.</summary>
+        private float ScaleForConstantScreenSize()
         {
-            if (hideOnComplete && _canvas != null)
+            float worldPerPixel;
+            if (_camera.orthographic)
             {
-                _canvas.gameObject.SetActive(false);
+                worldPerPixel = 2f * _camera.orthographicSize / Screen.height;
             }
+            else
+            {
+                float distance = Vector3.Dot(_canvas.transform.position - _camera.transform.position, _camera.transform.forward);
+                worldPerPixel = 2f * Mathf.Max(0.1f, distance) * Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height;
+            }
+
+            return worldPerPixel * widthOnScreen / CanvasSize.x;
         }
 
         private void CreateUi()
@@ -96,76 +124,62 @@ namespace Reclaim.Construction
             canvasObject.transform.SetParent(transform, false);
             _canvas = canvasObject.GetComponent<Canvas>();
             _canvas.renderMode = RenderMode.WorldSpace;
-            RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
-            canvasRect.sizeDelta = new Vector2(200f, 36f);
-            canvasObject.transform.localScale = Vector3.one * canvasScale;
+            canvasObject.GetComponent<RectTransform>().sizeDelta = CanvasSize;
 
-            GameObject sliderObject = new GameObject("ProgressSlider", typeof(RectTransform), typeof(Slider));
-            sliderObject.transform.SetParent(canvasObject.transform, false);
-            RectTransform sliderRect = sliderObject.GetComponent<RectTransform>();
-            sliderRect.anchorMin = new Vector2(0f, 0f);
-            sliderRect.anchorMax = new Vector2(1f, 1f);
-            sliderRect.offsetMin = new Vector2(8f, 8f);
-            sliderRect.offsetMax = new Vector2(-8f, -8f);
+            CreateImage("Background", canvasObject.transform, new Color(0.05f, 0.05f, 0.05f, 0.75f));
+            RectTransform fillArea = CreateImage("FillArea", canvasObject.transform, Color.clear).rectTransform;
+            fillArea.offsetMin = new Vector2(4f, 4f);
+            fillArea.offsetMax = new Vector2(-4f, -4f);
 
-            _slider = sliderObject.GetComponent<Slider>();
-            _slider.minValue = 0f;
-            _slider.maxValue = 1f;
-            _slider.interactable = false;
-            _slider.transition = Selectable.Transition.None;
+            _fillImage = CreateImage("Fill", fillArea, Color.white);
+            _fillRect = _fillImage.rectTransform;
 
-            GameObject background = new GameObject("Background", typeof(RectTransform), typeof(Image));
-            background.transform.SetParent(sliderObject.transform, false);
-            RectTransform bgRect = background.GetComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.offsetMin = Vector2.zero;
-            bgRect.offsetMax = Vector2.zero;
-            Image bgImage = background.GetComponent<Image>();
-            bgImage.color = new Color(0f, 0f, 0f, 0.55f);
-            _slider.targetGraphic = bgImage;
-
-            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
-            fillArea.transform.SetParent(sliderObject.transform, false);
-            RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
-            fillAreaRect.anchorMin = new Vector2(0f, 0f);
-            fillAreaRect.anchorMax = new Vector2(1f, 1f);
-            fillAreaRect.offsetMin = new Vector2(2f, 2f);
-            fillAreaRect.offsetMax = new Vector2(-2f, -2f);
-
-            GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(fillArea.transform, false);
-            RectTransform fillRect = fill.GetComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0f, 0f);
-            fillRect.anchorMax = new Vector2(1f, 1f);
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
-            _fillImage = fill.GetComponent<Image>();
-            _fillImage.color = new Color(0.95f, 0.72f, 0.15f, 1f);
-
-            _slider.fillRect = fillRect;
+            _label = CreateLabel(canvasObject.transform);
         }
 
-        private void UpdateFillColor(float progress01)
+        private static Image CreateImage(string name, Transform parent, Color color)
         {
-            if (_fillImage == null)
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static TMP_Text CreateLabel(Transform parent)
+        {
+            GameObject go = new GameObject("Seconds", typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            TMP_Text label = go.GetComponent<TMP_Text>();
+            label.alignment = TextAlignmentOptions.Center;
+            label.fontSize = 28f;
+            label.fontStyle = FontStyles.Bold;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        private static Color ColorFor(float progress01)
+        {
+            if (progress01 < 0.5f)
             {
-                return;
+                return new Color(0.87f, 0.45f, 0.16f, 1f);
             }
 
-            if (progress01 < (1f / 3f))
-            {
-                _fillImage.color = new Color(0.87f, 0.45f, 0.16f, 1f);
-                return;
-            }
-
-            if (progress01 < (2f / 3f))
-            {
-                _fillImage.color = new Color(0.95f, 0.72f, 0.15f, 1f);
-                return;
-            }
-
-            _fillImage.color = new Color(0.33f, 0.82f, 0.42f, 1f);
+            return progress01 < 1f ? new Color(0.95f, 0.72f, 0.15f, 1f) : new Color(0.33f, 0.82f, 0.42f, 1f);
         }
     }
 }

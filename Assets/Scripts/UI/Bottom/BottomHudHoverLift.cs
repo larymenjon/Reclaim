@@ -19,6 +19,16 @@ namespace Reclaim.UI.Bottom
         private bool _isPressed;
         private bool _initialized;
 
+        /// <summary>Elemento que sobe no hover.</summary>
+        public RectTransform Target => target;
+
+        /// <summary>Posição de repouso. Layout responsivo reposiciona por aqui para o lift não puxar o elemento de volta.</summary>
+        public Vector2 BasePosition
+        {
+            get => _basePosition;
+            set => _basePosition = value;
+        }
+
         private void Awake()
         {
             if (target == null)

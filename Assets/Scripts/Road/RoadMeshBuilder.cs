@@ -22,7 +22,18 @@ namespace Reclaim.Road
 
         public void Build(IReadOnlyList<Vector3> controlPoints, RoadSettings settings)
         {
-            if (controlPoints == null || controlPoints.Count < 2)
+            List<RoadNode> nodes = new List<RoadNode>(controlPoints != null ? controlPoints.Count : 0);
+            for (int i = 0; controlPoints != null && i < controlPoints.Count; i++)
+            {
+                nodes.Add(new RoadNode(controlPoints[i]));
+            }
+
+            Build(nodes, settings);
+        }
+
+        public void Build(IReadOnlyList<RoadNode> nodes, RoadSettings settings)
+        {
+            if (nodes == null || nodes.Count < 2)
             {
                 Debug.LogError("[RoadMeshBuilder] Precisa de ao menos 2 pontos de controle.");
                 return;
@@ -34,14 +45,18 @@ namespace Reclaim.Road
                 return;
             }
 
-            ControlPoints = new List<Vector3>(controlPoints);
+            ControlPoints = new List<Vector3>(nodes.Count);
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                ControlPoints.Add(nodes[i].Position);
+            }
 
             if (settings.RoadMaterial != null)
                 _renderer.sharedMaterial = settings.RoadMaterial;
             else
                 Debug.LogWarning("[RoadMeshBuilder] roadMaterial nao atribuido no RoadSettings.");
 
-            var spline = RoadSpline.BuildSpline(controlPoints, settings.ResolutionPerMeter);
+            var spline = RoadSpline.BuildSpline(nodes, settings.ResolutionPerMeter);
             if (spline.Count < 2)
             {
                 Debug.LogError("[RoadMeshBuilder] Spline gerada com menos de 2 pontos.");

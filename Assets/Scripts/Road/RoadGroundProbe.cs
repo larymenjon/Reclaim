@@ -13,7 +13,9 @@ namespace Reclaim.Road
 
         public static bool TryRaycast(Ray ray, float maxDistance, LayerMask mask, out RaycastHit bestHit)
         {
-            int count = Physics.RaycastNonAlloc(ray, Hits, maxDistance, mask, QueryTriggerInteraction.Ignore);
+            // Máscara vazia no asset significaria "nenhuma layer": nesse caso vale tudo.
+            int layers = mask.value == 0 ? Physics.DefaultRaycastLayers : mask.value;
+            int count = Physics.RaycastNonAlloc(ray, Hits, maxDistance, layers, QueryTriggerInteraction.Ignore);
             int bestIndex = -1;
             float bestDistance = float.MaxValue;
 

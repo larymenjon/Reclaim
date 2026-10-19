@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Remedios
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 5
-  displayName: "Remédios"
-  icon: {fileID: 0}
-  unitLabel: "UN."
+  displayName: "Rem\xE9dios"
+  icon: {fileID: 21300000, guid: 7e1b60be0dee557428223ceba3c67588, type: 3}
+  unitLabel: UN.
   isConsumable: 0
   startingAmount: 10
   storageCapacity: 50

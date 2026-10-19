@@ -3,15 +3,20 @@ using System.Collections.Generic;
 using Reclaim.Grid;
 using Reclaim.Input;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Reclaim.Road
 {
     /// <summary>
-    /// Ferramenta de estrada: o jogador clica pontos no terreno, vê a curva e confirma no martelo.
-    /// A estrada pronta ocupa as células do grid, impedindo construções por cima.
+    /// Ferramenta de estrada no estilo Manor Lords: o jogador clica para colocar pontos e
+    /// a estrada é uma curva suave entre eles. Clicar e arrastar ao colocar um ponto define a
+    /// direção em que a estrada passa por ele; sem arrastar, a curva se ajusta sozinha.
+    /// Confirma no martelo ou com Enter. A estrada pronta ocupa as células do grid.
     /// </summary>
     public class RoadBuilderSystem : MonoBehaviour
     {
+        private const int NoDrag = -1;
+
         [Header("Configurações")]
         [SerializeField] private RoadSettings settings;
 
@@ -21,12 +26,13 @@ namespace Reclaim.Road
         [SerializeField] private ConfirmBuildUI confirmUI;
         [SerializeField] private Transform roadsParent;
 
-        private readonly List<Vector3> _points = new List<Vector3>();
-        private readonly List<Vector3> _previewPoints = new List<Vector3>();
+        private readonly List<RoadNode> _nodes = new List<RoadNode>();
+        private readonly List<RoadNode> _previewNodes = new List<RoadNode>();
         private readonly List<GridCoordinate> _roadCells = new List<GridCoordinate>();
         private Camera _camera;
         private Vector3 _cursor;
         private bool _cursorOnGround;
+        private int _dragIndex = NoDrag;
 
         public bool IsBuilding { get; private set; }
 
@@ -74,7 +80,8 @@ namespace Reclaim.Road
             }
 
             IsBuilding = true;
-            _points.Clear();
+            _nodes.Clear();
+            _dragIndex = NoDrag;
             SetPreviewVisible(true);
             HideConfirm();
         }
@@ -82,75 +89,135 @@ namespace Reclaim.Road
         public void Disable()
         {
             IsBuilding = false;
-            _points.Clear();
+            _nodes.Clear();
+            _dragIndex = NoDrag;
             SetPreviewVisible(false);
             HideConfirm();
         }
+
+        // ---------- Entrada ----------
 
         private void HandleInput()
         {
             if (PointerInput.SecondaryPressedThisFrame)
             {
-                RemoveLastPoint();
+                RemoveLastNode();
+                return;
+            }
+
+            if (_dragIndex != NoDrag)
+            {
+                ContinueDrag();
+                return;
+            }
+
+            if (PointerInput.KeyPressedThisFrame(Key.Enter) || PointerInput.KeyPressedThisFrame(Key.NumpadEnter))
+            {
+                Confirm();
                 return;
             }
 
             if (PointerInput.PrimaryPressedThisFrame && !PointerInput.IsOverUI)
             {
-                TryAddPoint();
+                TryAddNode();
             }
         }
 
-        private void TryAddPoint()
+        private void TryAddNode()
         {
             if (!_cursorOnGround)
             {
                 return;
             }
 
-            if (_points.Count > 0 && Vector3.Distance(_points[_points.Count - 1], _cursor) < settings.MinPointDistance)
+            if (_nodes.Count > 0 && Vector3.Distance(_nodes[_nodes.Count - 1].Position, _cursor) < settings.MinPointDistance)
             {
                 return;
             }
 
-            _points.Add(_cursor);
-            if (_points.Count >= 2)
+            _nodes.Add(new RoadNode(_cursor));
+            _dragIndex = _nodes.Count - 1;
+            HideConfirm();
+        }
+
+        /// <summary>Enquanto o botão está pressionado, o arrasto define a direção da estrada no ponto.</summary>
+        private void ContinueDrag()
+        {
+            RoadNode node = _nodes[_dragIndex];
+            Vector3 offset = _cursor - node.Position;
+            offset.y = 0f;
+            bool dragged = _cursorOnGround && offset.magnitude >= settings.DragThreshold;
+
+            node.ManualDirection = dragged ? offset : Vector3.zero;
+            _nodes[_dragIndex] = node;
+
+            if (previewController != null)
+            {
+                if (dragged)
+                {
+                    previewController.ShowHandle(node.Position, node.Position + offset);
+                }
+                else
+                {
+                    previewController.HideHandle();
+                }
+            }
+
+            if (PointerInput.PrimaryHeld)
+            {
+                return;
+            }
+
+            _dragIndex = NoDrag;
+            if (previewController != null)
+            {
+                previewController.HideHandle();
+            }
+
+            if (_nodes.Count >= 2)
             {
                 ShowConfirm();
             }
         }
 
-        private void RemoveLastPoint()
+        private void RemoveLastNode()
         {
-            if (_points.Count == 0)
+            _dragIndex = NoDrag;
+            if (previewController != null)
+            {
+                previewController.HideHandle();
+            }
+
+            if (_nodes.Count == 0)
             {
                 OnFinished?.Invoke();
                 return;
             }
 
-            _points.RemoveAt(_points.Count - 1);
-            if (_points.Count < 2)
+            _nodes.RemoveAt(_nodes.Count - 1);
+            if (_nodes.Count < 2)
             {
                 HideConfirm();
             }
         }
 
+        // ---------- Construção ----------
+
         private void Confirm()
         {
-            if (_points.Count < 2)
+            if (_nodes.Count < 2)
             {
                 return;
             }
 
-            List<Vector3> spline = RoadSpline.BuildSpline(_points, settings.ResolutionPerMeter);
-            if (!CollectRoadCells(spline))
+            if (!CollectRoadCells(_nodes, _roadCells))
             {
                 Debug.Log("[RoadBuilderSystem] A estrada atravessa uma construção. Ajuste o traçado.");
                 ShowConfirm();
                 return;
             }
 
-            BuildRoad(_points);
+            BuildRoad(_nodes);
             if (gridManager != null)
             {
                 gridManager.SetOccupancy(_roadCells, OccupancyType.Road, this);
@@ -159,58 +226,83 @@ namespace Reclaim.Road
             OnFinished?.Invoke();
         }
 
-        /// <summary>Preenche as células cobertas pela estrada. Falso se alguma for de construção.</summary>
-        private bool CollectRoadCells(IReadOnlyList<Vector3> spline)
+        /// <summary>
+        /// Células cobertas pela estrada, considerando a largura. Falso se alguma for de construção.
+        /// Com output nulo só valida.
+        /// </summary>
+        private bool CollectRoadCells(IReadOnlyList<RoadNode> nodes, List<GridCoordinate> output)
         {
-            _roadCells.Clear();
+            output?.Clear();
             if (gridManager == null)
             {
                 return true;
             }
 
+            List<Vector3> spline = RoadSpline.BuildSpline(nodes, settings.ResolutionPerMeter);
+            float halfWidth = settings.RoadWidth * 0.5f;
             for (int i = 0; i < spline.Count; i++)
             {
-                if (!gridManager.TryWorldToGrid(spline[i], out GridCoordinate cell))
-                {
-                    continue;
-                }
+                Vector3 tangent = RoadSpline.GetTangent(spline, i);
+                tangent.y = 0f;
+                Vector3 right = tangent.sqrMagnitude > 0.0001f ? Vector3.Cross(Vector3.up, tangent.normalized) : Vector3.right;
 
-                if (!gridManager.CanPlaceRoad(cell))
+                for (int lane = -1; lane <= 1; lane++)
                 {
-                    return false;
-                }
-
-                if (!_roadCells.Contains(cell))
-                {
-                    _roadCells.Add(cell);
+                    if (!TryClaimCell(spline[i] + right * (lane * halfWidth), output))
+                    {
+                        return false;
+                    }
                 }
             }
 
             return true;
         }
 
-        private void BuildRoad(IReadOnlyList<Vector3> controlPoints)
+        private bool TryClaimCell(Vector3 worldPoint, List<GridCoordinate> output)
+        {
+            if (!gridManager.TryWorldToGrid(worldPoint, out GridCoordinate cell))
+            {
+                return true;
+            }
+
+            if (!gridManager.CanPlaceRoad(cell))
+            {
+                return false;
+            }
+
+            if (output != null && !output.Contains(cell))
+            {
+                output.Add(cell);
+            }
+
+            return true;
+        }
+
+        private void BuildRoad(IReadOnlyList<RoadNode> nodes)
         {
             GameObject road = new GameObject("DirtRoad");
             road.transform.SetParent(roadsParent, true);
-            road.AddComponent<RoadMeshBuilder>().Build(controlPoints, settings);
+            road.AddComponent<RoadMeshBuilder>().Build(nodes, settings);
         }
+
+        // ---------- Preview ----------
 
         private void RefreshPreview()
         {
-            _previewPoints.Clear();
-            _previewPoints.AddRange(_points);
-            if (_cursorOnGround)
+            _previewNodes.Clear();
+            _previewNodes.AddRange(_nodes);
+            if (_cursorOnGround && _dragIndex == NoDrag)
             {
-                _previewPoints.Add(_cursor);
+                _previewNodes.Add(new RoadNode(_cursor));
             }
 
+            bool valid = _previewNodes.Count < 2 || CollectRoadCells(_previewNodes, null);
             if (previewController != null)
             {
-                previewController.UpdatePreview(_previewPoints, _points.Count, _cursorOnGround);
+                previewController.UpdatePreview(_previewNodes, _nodes.Count, valid);
             }
 
-            if (confirmUI != null && confirmUI.IsVisible && _points.Count >= 2)
+            if (confirmUI != null && confirmUI.IsVisible && _nodes.Count >= 2)
             {
                 confirmUI.UpdatePosition(LastPoint());
             }
@@ -268,6 +360,6 @@ namespace Reclaim.Road
             }
         }
 
-        private Vector3 LastPoint() => _points.Count > 0 ? _points[_points.Count - 1] : Vector3.zero;
+        private Vector3 LastPoint() => _nodes.Count > 0 ? _nodes[_nodes.Count - 1].Position : Vector3.zero;
     }
 }

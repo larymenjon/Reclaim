@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 namespace Reclaim.Input
 {
     /// <summary>
-    /// Câmera de estratégia: WASD e borda da tela movem, Q/E e botão do meio giram,
+    /// Câmera de estratégia: WASD, setas e a borda da tela movem (Shift acelera), Q/E e botão do meio giram e inclinam,
     /// roda do mouse dá zoom com inclinação automática. Respeita os limites do terreno.
     /// Usa tempo não escalado para continuar funcionando com o jogo pausado.
     /// </summary>
@@ -28,6 +28,8 @@ namespace Reclaim.Input
         [SerializeField] private float maxZoomMoveMultiplier = 1.5f;
         [SerializeField] private float edgeSpeedMultiplier = 0.35f;
         [SerializeField] private float edgeRampExponent = 2f;
+        [Tooltip("Multiplicador de velocidade enquanto Shift está pressionado.")]
+        [SerializeField, Min(1f)] private float fastMoveMultiplier = 2f;
 
         [Header("Zoom")]
         [SerializeField] private float zoomSensitivity = 0.75f;
@@ -50,6 +52,9 @@ namespace Reclaim.Input
         [SerializeField] private float keyboardYawSensitivity = 120f;
         [SerializeField] private float minPitch = 35f;
         [SerializeField] private float maxPitch = 82f;
+        [Tooltip("Quanto o jogador pode inclinar a câmera à mão (arrastando o botão do meio para cima ou para baixo), em graus.")]
+        [SerializeField, Min(0f)] private float manualPitchRange = 25f;
+        [SerializeField] private float pitchDragSensitivity = 8f;
         [SerializeField] private float rotationSmoothTime = 0.1f;
         [SerializeField] private bool enableMiddleMouseOrbit = true;
         [SerializeField] private bool enableKeyboardRotation = true;
@@ -82,6 +87,7 @@ namespace Reclaim.Input
 
         private float _targetYaw;
         private float _targetPitch;
+        private float _manualPitchOffset;
         private float _currentYaw;
         private float _currentPitch;
         private float _yawVelocity;
@@ -148,7 +154,8 @@ namespace Reclaim.Input
             float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
             float speedMultiplier = speedScalesWithZoom ? Mathf.Lerp(minZoomMoveMultiplier, maxZoomMoveMultiplier, zoomT) : 1f;
 
-            Vector3 desiredVelocity = (flatRight * desiredPlanarInput.x + flatForward * desiredPlanarInput.y) * moveSensitivity * speedMultiplier;
+            float boost = PointerInput.KeyHeld(Key.LeftShift) || PointerInput.KeyHeld(Key.RightShift) ? fastMoveMultiplier : 1f;
+            Vector3 desiredVelocity = (flatRight * desiredPlanarInput.x + flatForward * desiredPlanarInput.y) * moveSensitivity * speedMultiplier * boost;
             desiredVelocity = ApplyElasticEdgeResistance(desiredVelocity);
 
             float acceleration = desiredVelocity.sqrMagnitude > 0.0001f ? moveAcceleration : moveDeceleration;
@@ -179,7 +186,12 @@ namespace Reclaim.Input
             _targetYaw += yawDelta;
 
             float zoomT = Mathf.InverseLerp(minZoomDistance, maxZoomDistance, _targetZoomDistance);
-            _targetPitch = Mathf.Lerp(minPitch, maxPitch, zoomT);
+            if (enableMiddleMouseOrbit && PointerInput.MiddleHeld)
+            {
+                _manualPitchOffset = Mathf.Clamp(_manualPitchOffset - PointerInput.Delta.y * pitchDragSensitivity * deltaTime, -manualPitchRange, manualPitchRange);
+            }
+
+            _targetPitch = Mathf.Clamp(Mathf.Lerp(minPitch, maxPitch, zoomT) + _manualPitchOffset, minPitch - manualPitchRange, maxPitch);
         }
 
         private void ProcessZoom(float deltaTime)
@@ -291,34 +303,32 @@ namespace Reclaim.Input
 
             if (keepCameraViewInsideBounds && TryGetGroundViewExtents(out float halfWidth, out float halfHeight))
             {
-                minX += halfWidth + cameraViewEdgePadding;
-                maxX -= halfWidth + cameraViewEdgePadding;
-                minZ += halfHeight + cameraViewEdgePadding;
-                maxZ -= halfHeight + cameraViewEdgePadding;
-            }
+                // Se a vista é maior que o mapa, ignora a margem naquele eixo em vez de travar a câmera no centro.
+                float paddedMinX = minX + halfWidth + cameraViewEdgePadding;
+                float paddedMaxX = maxX - halfWidth - cameraViewEdgePadding;
+                if (paddedMinX <= paddedMaxX)
+                {
+                    minX = paddedMinX;
+                    maxX = paddedMaxX;
+                }
 
-            if (minX > maxX)
-            {
-                float centerX = (minBounds.x + maxBounds.x) * 0.5f;
-                minX = centerX;
-                maxX = centerX;
-            }
-
-            if (minZ > maxZ)
-            {
-                float centerZ = (minBounds.y + maxBounds.y) * 0.5f;
-                minZ = centerZ;
-                maxZ = centerZ;
+                float paddedMinZ = minZ + halfHeight + cameraViewEdgePadding;
+                float paddedMaxZ = maxZ - halfHeight - cameraViewEdgePadding;
+                if (paddedMinZ <= paddedMaxZ)
+                {
+                    minZ = paddedMinZ;
+                    maxZ = paddedMaxZ;
+                }
             }
         }
 
         private static Vector2 GetMoveInput()
         {
             Vector2 input = Vector2.zero;
-            if (PointerInput.KeyHeld(Key.W)) input.y += 1f;
-            if (PointerInput.KeyHeld(Key.S)) input.y -= 1f;
-            if (PointerInput.KeyHeld(Key.D)) input.x += 1f;
-            if (PointerInput.KeyHeld(Key.A)) input.x -= 1f;
+            if (PointerInput.KeyHeld(Key.W) || PointerInput.KeyHeld(Key.UpArrow)) input.y += 1f;
+            if (PointerInput.KeyHeld(Key.S) || PointerInput.KeyHeld(Key.DownArrow)) input.y -= 1f;
+            if (PointerInput.KeyHeld(Key.D) || PointerInput.KeyHeld(Key.RightArrow)) input.x += 1f;
+            if (PointerInput.KeyHeld(Key.A) || PointerInput.KeyHeld(Key.LeftArrow)) input.x -= 1f;
             return input;
         }
 
@@ -328,6 +338,10 @@ namespace Reclaim.Input
         private Vector2 GetEdgeScrollInput()
         {
             Vector2 mouse = PointerInput.Position;
+            if (!Application.isFocused || PointerInput.MiddleHeld || !IsInsideWindow(mouse))
+            {
+                return Vector2.zero;
+            }
 
             float left = GetEdgeFactor(mouse.x, edgeSizePixels);
             float right = GetEdgeFactor(Screen.width - mouse.x, edgeSizePixels);
@@ -335,6 +349,11 @@ namespace Reclaim.Input
             float top = GetEdgeFactor(Screen.height - mouse.y, edgeSizePixels);
 
             return new Vector2(right - left, top - bottom) * (edgeScrollSensitivity / moveSensitivity);
+        }
+
+        private static bool IsInsideWindow(Vector2 mouse)
+        {
+            return mouse.x >= 0f && mouse.y >= 0f && mouse.x <= Screen.width && mouse.y <= Screen.height;
         }
 
         private float GetEdgeFactor(float distanceToEdge, float threshold)
@@ -391,7 +410,7 @@ namespace Reclaim.Input
                 return false;
             }
 
-            Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, fallbackGroundHeight, 0f));
+            Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, SampleGroundHeightAt(_targetRigPosition.x, _targetRigPosition.z), 0f));
             for (int i = 0; i < ViewportCorners.Length; i++)
             {
                 Ray ray = targetCamera.ViewportPointToRay(ViewportCorners[i]);

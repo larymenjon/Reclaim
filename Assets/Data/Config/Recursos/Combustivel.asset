@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Combustivel
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 4
-  displayName: "Combustível"
-  icon: {fileID: 0}
-  unitLabel: "UN."
+  displayName: "Combust\xEDvel"
+  icon: {fileID: 21300000, guid: da1db2cb2db194d40b921487a20079f9, type: 3}
+  unitLabel: UN.
   isConsumable: 0
   startingAmount: 60
   storageCapacity: 200

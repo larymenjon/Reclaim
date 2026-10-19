@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Madeira
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 2
-  displayName: "Madeira"
-  icon: {fileID: 0}
-  unitLabel: "UN."
+  displayName: Madeira
+  icon: {fileID: 21300000, guid: 7ffb0e7c7d100284da377a01de99fb56, type: 3}
+  unitLabel: UN.
   isConsumable: 0
   startingAmount: 120
   storageCapacity: 500

@@ -44,6 +44,15 @@ namespace Reclaim.Economy.Forestry
 
         private float _nextScanTime;
 
+        /// <summary>Liga ou desliga o corte automático sem moradores. Desligado, só os lenhadores designados cortam.</summary>
+        public void SetAutoHarvest(bool value)
+        {
+            autoHarvest = value;
+        }
+
+        /// <summary>Prefab de árvore configurado na cena (se houver), para reaproveitar na geração aleatória.</summary>
+        public GameObject TreeNodePrefab => treeNodePrefab;
+
         public int ActiveWorkers { get; private set; }
         public int MaxWorkers => ResolveMaxWorkers();
 

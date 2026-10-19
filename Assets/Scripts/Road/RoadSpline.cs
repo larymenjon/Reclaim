@@ -4,52 +4,71 @@ using UnityEngine;
 namespace Reclaim.Road
 {
     /// <summary>
-    /// Utilitários de spline Catmull-Rom para suavizar caminhos de estrada.
+    /// Ponto de controle da estrada. Sem direção manual, a tangente é automática (Catmull-Rom).
+    /// Com direção manual (jogador arrastou ao colocar o ponto), a estrada passa por ele nessa direção.
+    /// </summary>
+    public struct RoadNode
+    {
+        public Vector3 Position;
+        /// <summary>Direção de passagem escolhida pelo jogador. Zero = automática.</summary>
+        public Vector3 ManualDirection;
+
+        public bool HasManualDirection => ManualDirection.sqrMagnitude > 0.0001f;
+
+        public RoadNode(Vector3 position)
+        {
+            Position = position;
+            ManualDirection = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// Curvas de estrada: segmentos Hermite entre os nós. Sem direções manuais o resultado é
+    /// idêntico a uma Catmull-Rom; com direções manuais o jogador controla cada curva.
     /// </summary>
     public static class RoadSpline
     {
-        /// <summary>
-        /// Converte uma lista de pontos de controle em uma spline Catmull-Rom suavizada.
-        /// </summary>
-        /// <param name="controlPoints">Pontos colocados pelo jogador.</param>
-        /// <param name="resolutionPerMeter">Amostras por metro de distância.</param>
-        /// <returns>Lista densa de pontos ao longo da curva.</returns>
+        /// <summary>Spline suave por pontos simples, com tangentes automáticas.</summary>
         public static List<Vector3> BuildSpline(IReadOnlyList<Vector3> controlPoints, float resolutionPerMeter)
         {
-            var result = new List<Vector3>();
-            if (controlPoints.Count < 2) return result;
-
-            // Para Catmull-Rom, adicionamos pontos fantasma nas extremidades
-            var pts = new List<Vector3>(controlPoints.Count + 2);
-            pts.Add(controlPoints[0] + (controlPoints[0] - controlPoints[1]));   // fantasma início
-            pts.AddRange(controlPoints);
-            pts.Add(controlPoints[^1] + (controlPoints[^1] - controlPoints[^2])); // fantasma fim
-
-            for (int i = 1; i < pts.Count - 2; i++)
+            List<RoadNode> nodes = new List<RoadNode>(controlPoints.Count);
+            for (int i = 0; i < controlPoints.Count; i++)
             {
-                Vector3 p0 = pts[i - 1];
-                Vector3 p1 = pts[i];
-                Vector3 p2 = pts[i + 1];
-                Vector3 p3 = pts[i + 2];
+                nodes.Add(new RoadNode(controlPoints[i]));
+            }
 
-                float segmentLength = Vector3.Distance(p1, p2);
-                int   steps         = Mathf.Max(2, Mathf.RoundToInt(segmentLength * resolutionPerMeter));
+            return BuildSpline(nodes, resolutionPerMeter);
+        }
 
+        /// <summary>Spline pelos nós, respeitando a direção manual de cada um.</summary>
+        public static List<Vector3> BuildSpline(IReadOnlyList<RoadNode> nodes, float resolutionPerMeter)
+        {
+            List<Vector3> result = new List<Vector3>();
+            if (nodes.Count < 2)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < nodes.Count - 1; i++)
+            {
+                Vector3 p0 = nodes[i].Position;
+                Vector3 p1 = nodes[i + 1].Position;
+                float length = Vector3.Distance(p0, p1);
+                Vector3 m0 = TangentAt(nodes, i, length);
+                Vector3 m1 = TangentAt(nodes, i + 1, length);
+
+                int steps = Mathf.Max(2, Mathf.RoundToInt(length * resolutionPerMeter));
                 for (int s = 0; s < steps; s++)
                 {
-                    float t = (float)s / steps;
-                    result.Add(CatmullRom(p0, p1, p2, p3, t));
+                    result.Add(Hermite(p0, m0, p1, m1, (float)s / steps));
                 }
             }
 
-            // Adiciona o ponto final exato
-            result.Add(controlPoints[^1]);
+            result.Add(nodes[nodes.Count - 1].Position);
             return result;
         }
 
-        /// <summary>
-        /// Calcula a tangente (direção) num ponto da spline.
-        /// </summary>
+        /// <summary>Direção (tangente) num ponto da spline.</summary>
         public static Vector3 GetTangent(IReadOnlyList<Vector3> splinePoints, int index)
         {
             if (splinePoints.Count < 2) return Vector3.forward;
@@ -60,19 +79,36 @@ namespace Reclaim.Road
             return (splinePoints[index + 1] - splinePoints[index - 1]).normalized;
         }
 
-        // ── Fórmula Catmull-Rom ───────────────────────────────────────
+        /// <summary>Tangente Hermite do nó, em escala do segmento que está sendo desenhado.</summary>
+        private static Vector3 TangentAt(IReadOnlyList<RoadNode> nodes, int index, float segmentLength)
+        {
+            RoadNode node = nodes[index];
+            if (node.HasManualDirection)
+            {
+                return node.ManualDirection.normalized * segmentLength;
+            }
 
-        private static Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+            if (index == 0)
+            {
+                return nodes[1].Position - node.Position;
+            }
+
+            if (index == nodes.Count - 1)
+            {
+                return node.Position - nodes[index - 1].Position;
+            }
+
+            return 0.5f * (nodes[index + 1].Position - nodes[index - 1].Position);
+        }
+
+        private static Vector3 Hermite(Vector3 p0, Vector3 m0, Vector3 p1, Vector3 m1, float t)
         {
             float t2 = t * t;
             float t3 = t2 * t;
-
-            return 0.5f * (
-                2f * p1 +
-                (-p0 + p2) * t +
-                (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
-                (-p0 + 3f * p1 - 3f * p2 + p3) * t3
-            );
+            return (2f * t3 - 3f * t2 + 1f) * p0
+                 + (t3 - 2f * t2 + t) * m0
+                 + (-2f * t3 + 3f * t2) * p1
+                 + (t3 - t2) * m1;
         }
     }
 }

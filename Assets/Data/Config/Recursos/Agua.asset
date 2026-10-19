@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Agua
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 1
-  displayName: "Água"
-  icon: {fileID: 0}
-  unitLabel: "DIAS"
+  displayName: "\xC1gua"
+  icon: {fileID: 21300000, guid: f4c63d59472bcd94e8cb61f31e5db775, type: 3}
+  unitLabel: DIAS
   isConsumable: 1
   startingAmount: 450
   storageCapacity: 700

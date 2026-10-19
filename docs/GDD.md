@@ -123,7 +123,8 @@ Todos os valores estão nos assets de `Assets/Data/Config/Recursos`. O `Resource
 
 - Grid quadrado sincronizado com o terreno; rotação em 4 direções com R.
 - Custo em madeira e sucata cobrado no clique. Sem recursos, o fantasma fica vermelho e a construção é recusada.
-- Três estágios visuais: fundação (0 a 33%), estrutura (33 a 66%) e concluída. Barra de progresso no mundo.
+- Três estágios visuais: fundação (início), estrutura (a partir de 50% do tempo) e concluída. Sem modelos de estágio, a obra sobe do chão até a altura final. Barra de progresso no mundo, com tamanho fixo na tela e os segundos que faltam.
+- O tamanho no mundo vem do `Size` do BuildingData: o modelo (preview e todos os estágios) é ajustado à pegada, com `Footprint Fill` controlando a folga. Desligue `Fit To Footprint` para usar a escala original do modelo.
 - Árvores dentro da área são cortadas e a madeira entra no estoque.
 - Z desfaz a última construção e devolve o custo.
 - Botão direito cancela a ferramenta.
@@ -142,17 +143,27 @@ Todos os valores estão nos assets de `Assets/Data/Config/Recursos`. O `Resource
 
 ### 6.2 Estradas
 
-O jogador clica pontos no terreno, a estrada aparece como curva suave (Catmull-Rom) e é confirmada no botão do martelo. Botão direito remove o último ponto; sem pontos, sai da ferramenta. A estrada pronta ocupa as células do grid e não pode atravessar construções.
+Estilo Manor Lords. O jogador clica para colocar pontos e a estrada é uma curva suave (Hermite) entre eles. **Clicar e arrastar** ao colocar um ponto fixa a direção em que a estrada passa por ele (uma alça mostra a direção); sem arrastar, a curva se ajusta sozinha. Confirma no botão do martelo ou com Enter. Botão direito remove o último ponto; sem pontos, sai da ferramenta. A preview fica vermelha quando a estrada atravessa uma construção. A estrada pronta ocupa as células cobertas pela largura e não pode atravessar construções.
+
+### 6.3 Começo do jogo, moradores e trabalho
+
+- A colônia começa com as famílias em **barracas dispostas em círculo no meio do mapa**, sem casa. Pendências: uma casa por família, armazém e oficina, mais um lenhador e um catador designados. Elas aparecem na lista do canto da tela e não travam a simulação.
+- Cada família vira moradores visíveis: homem, mulher e crianças. Cachorros circulam pelo acampamento sem função (figurativos).
+- Moradores têm **autonomia**: quem tem ofício sai para o trabalho na hora certa (padrão 7h às 17h), executa o ciclo e volta sozinho; os demais circulam perto de casa; à noite todos dormem (em casa, somem de vista).
+- O jogador **designa** o trabalho: com nenhuma ferramenta ativa, clica numa construção de trabalho pronta e aumenta ou diminui cada ofício. A oficina oferece Lenhador (2), Catador de sucata (2) e Plantador (1), definidos em `BuildingData.Job Slots`.
+- Ofícios: o lenhador derruba a árvore mais próxima e leva a madeira à oficina; o catador recolhe montes de sucata e escombros do mapa e leva à oficina; o plantador replanta tocos.
+- Quando uma casa fica pronta, uma família sem casa se muda e a barraca some.
+- Prefabs: `Assets/Resources/SettlementSettings` tem os espaços de homem, mulher, criança, cachorro e barraca (e árvore, toco, muda, monte de sucata). Campo vazio usa um modelo simples gerado por código.
 
 ## 7. Floresta
 
 | Estado | Descrição |
 |---|---|
 | De pé | Pode ser cortada |
-| Cortada | Toco; madeira já coletada |
-| Crescendo | Muda; volta a ficar de pé depois de um tempo |
+| Cortada | Toco; fica assim até um plantador replantar |
+| Crescendo | Muda que cresce sozinha até ficar de pé de novo |
 
-Um lenhador para cada 4 moradores. O corte é automático e mostra "+N madeira" no mundo.
+As árvores são espalhadas ao iniciar a partida, em clareiras e esparsas, longe do acampamento. O corte é feito pelos lenhadores designados (a contagem automática por população foi desligada) e mostra "+N madeira" no mundo. Sucata e escombros também nascem espalhados e são recolhidos pelos catadores. Em volta do mapa há um anel de montanhas procedurais e névoa: o limite existe, mas o fim do mundo não aparece.
 
 ## 8. Famílias e necessidades
 
@@ -287,6 +298,26 @@ Componentes da tela de jogo (1920x1080):
 | Aviso rápido | Acima da doca | Mensagem de 2,2 s; "Pausado" em amarelo |
 | Cartão de construção | Doca | Estados Disponível, Selecionado, Insuficiente, Bloqueado |
 
+### 14.1 Implementação no Unity
+
+A HUD é montada pelo menu **Reclaim > Criar HUD do redesign**, que cria o Canvas "HUD Redesign" (1920x1080, Scale With Screen Size, match 0,5), liga as referências e desliga a barra e a doca antigas sem apagá-las. Ícones e formas exportados do Figma ficam em `Assets/UI/Redesign`; as cores ficam no asset `Assets/Data/Config/HudTema.asset` (`HudTheme`). As fontes da HUD são dinâmicas, criadas dos TTFs da Barlow Condensed, porque os SDF antigos só têm ASCII e não desenham acentos.
+
+| Componente | Script |
+|---|---|
+| Barra superior e placa do nome | `TopBarView`, `ResourceCounterView` |
+| Cartão de evento | `EventCardView`, `EventChoiceButtonView` |
+| Notificações | `NotificationFeedView`, `NotificationItemView` |
+| Dia e noite | `DayNightView` |
+| Estação | `SeasonView` |
+| Calendário e velocidade | `CalendarView` |
+| Aviso rápido | `ToastView` |
+| Doca e cartão de construção | `BuildDockView`, `BuildCardView` |
+| Textos de aviso e notificação | `HudFeedbackRouter`, `HudFormat` |
+
+As views só exibem dados da `ColonySimulation`, do `BuildingSystem` e do `ToolModeController`. O `HudFeedbackRouter` é o único que decide quando aparece um aviso: seleção de construção e estrada (aviso rápido), falta de recurso ao construir, construção concluída, resultado de evento, perda de moradores, reserva de comida ou água abaixo de 3 dias (Alerta) e de 1 dia (Crítica).
+
+Fora desta entrega: Painel do líder (as habilidades ainda não têm efeito na simulação, então o painel seria um botão sem função), estado Bloqueado do cartão de construção (não existe pesquisa no alpha) e o clique da notificação levando a câmera ao local (as notificações ainda não carregam posição; hoje o clique só fecha).
+
 ## 15. Controles
 
 | Ação | Entrada |
@@ -321,8 +352,9 @@ Música melancólica com esperança, uma camada para o dia e outra para a noite 
 |---|---|---|---|
 | A0 · Fundação | Grid, câmera, entrada, construção, estradas, floresta | Construir casa, abrir estrada, cortar árvore | Pronto |
 | A1 · Arquitetura | Uma simulação, uma economia, dados em assets, migração para 6.6 | Cena configurada pelo menu, HUD lendo a simulação | Pronto nesta revisão |
-| A2 · HUD do redesign | Barra superior, calendário, velocidade, dia e noite, estação, cartão de evento, avisos | Telas do Figma funcionando no jogo | Próximo |
+| A2 · HUD do redesign | Barra superior, calendário, velocidade, dia e noite, estação, cartão de evento, avisos | Telas do Figma funcionando no jogo | Em validação no Editor (ver 14.1) |
 | A3 · Clima e escassez | Moradia, desabrigados, aquecimento com combustível, poço e horta com trabalhadores | Primeiro inverno vencível só com planejamento | Depois do A2 |
+| A2.1 · Novo Jogo do redesign | Telas de líder, mapa, bandeira e nome conforme o Figma | Fluxo de Novo Jogo com o visual novo | Depois do A2 |
 | A4 · Eventos | Os 7 eventos da seção 10.1 e os dilemas dos líderes | Partida de 2 anos com eventos variados | Depois do A3 |
 | A5 · Líderes e Novo Jogo | Efeitos das habilidades, mapas com clima próprio, dificuldade | Escolhas do Novo Jogo mudam a partida | Depois do A4 |
 | A6 · Save | Save e load em arquivo JSON com versão | Fechar e voltar sem perder estado | Depois do A5 |

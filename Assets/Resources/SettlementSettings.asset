@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa72a3f49673ba0409d07ff9d5028e6e, type: 3}
+  m_Name: SettlementSettings
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Settlement.SettlementSettings
+  manPrefab: {fileID: 0}
+  womanPrefab: {fileID: 0}
+  childPrefab: {fileID: 0}
+  dogPrefab: {fileID: 0}
+  tentPrefab: {fileID: 0}
+  campRadius: 11
+  dogsPerTwoFamilies: 1
+  adultSpeed: 2.2
+  childSpeed: 1.8
+  dogSpeed: 3.2
+  workStartHour: 7
+  workEndHour: 17
+  sleepStartHour: 21
+  treeStandingPrefab: {fileID: 2313601954105380130, guid: adaef733652b60c479a1d5b9ae56f6ce, type: 3}
+  treeStumpPrefab: {fileID: 5118008985039405347, guid: e0210c78913c32649ba54e3dd7eb8796, type: 3}
+  treeSaplingPrefab: {fileID: 0}
+  treeCount: 700
+  forestClusters: 16
+  populateRadius: 700
+  treeClearRadiusAroundCamp: 30
+  minTreeSpacing: 3
+  maxSlopeDegrees: 28
+  woodPerTree: 12
+  chopSeconds: 6
+  plantSeconds: 4
+  growSeconds: 120
+  scrapPilePrefab: {fileID: 0}
+  scrapPileCount: 90
+  scrapPerPile: 8
+  collectSeconds: 5
+  createHorizon: 1
+  horizonWidth: 3000
+  horizonMountainHeight: 260
+  useFog: 1
+  fogDayColor: {r: 0.62, g: 0.7, b: 0.78, a: 1}
+  fogNightColor: {r: 0.05, g: 0.07, b: 0.11, a: 1}
+  fogStartDistance: 500
+  fogEndDistance: 3200
+  storageBuilding: {fileID: 11400000, guid: 3b026445be5f8d44d885bf9b88a4a918, type: 2}
+  industryBuilding: {fileID: 11400000, guid: dbc829eb3e3c0a840be6377156e35774, type: 2}

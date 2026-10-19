@@ -13,17 +13,23 @@ MonoBehaviour:
   m_Name: Industry
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Building.BuildingData
   id: Industry
-  displayName: Industry
+  displayName: Oficina
+  description: Sem descricao.
+  icon: {fileID: 21300000, guid: 18a0cdafb6b294540b24225ede36296b, type: 3}
   prefab: {fileID: 8134591842676434707, guid: 9984ad3dfd58ac64c9fa980d6b96a6ed, type: 3}
   size: {x: 2, y: 2}
   canRotate: 1
   countsAsHouse: 0
-  description: Sem descricao.
   woodCost: 20
   scrapCost: 15
   constructionDurationSeconds: 10
   foundationStagePrefab: {fileID: 0}
   midStagePrefab: {fileID: 0}
   completedStagePrefab: {fileID: 8134591842676434707, guid: 9984ad3dfd58ac64c9fa980d6b96a6ed, type: 3}
-  allowGardenPlotSelection: 0
-  defaultGardenPlotSize: {x: 2, y: 2}
+  jobSlots:
+  - job: 1
+    capacity: 2
+  - job: 2
+    capacity: 2
+  - job: 3
+    capacity: 1

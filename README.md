@@ -16,7 +16,9 @@ RECLAIM é um city builder de sobrevivência pós-apocalíptico em que cada esco
 
 Funciona hoje: construção em grid com estágios de obra e desfazer, estradas com curva, floresta com corte automático, famílias com fome, saúde, moral, doença, nascimento e morte, clima por estação, esperança coletiva, diretor de eventos com dilemas, fluxo de Intro, Menu, Novo Jogo e Loading.
 
-Em desenvolvimento: HUD do redesign do Figma, moradia e aquecimento, produção com poço e horta, conteúdo de eventos.
+HUD do redesign do Figma: montada pelo menu **Reclaim > Criar HUD do redesign** (detalhes no GDD, seção 14.1).
+
+Em desenvolvimento: telas de Novo Jogo do redesign, moradia e aquecimento, produção com poço e horta, conteúdo de eventos.
 
 O plano completo está no [GDD](docs/GDD.md).
 
@@ -25,7 +27,7 @@ O plano completo está no [GDD](docs/GDD.md).
 1. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`. Cenas e modelos ficam no LFS.
 2. Clone: `git clone https://github.com/larymenjon/reclaim.git`
 3. Abra no Unity Hub com a versão **6000.6.x**.
-4. Abra `Assets/Scenes/Game.unity` e use o menu **Reclaim > Configurar cena de jogo** se a cena ainda não tiver o objeto "Simulação".
+4. Abra `Assets/Scenes/Game.unity` e use o menu **Reclaim > Configurar cena de jogo** se a cena ainda não tiver o objeto "Simulação". Depois, **Reclaim > Criar HUD do redesign**.
 5. Para jogar o fluxo completo, comece pela cena `Intro`.
 
 Evite deixar o projeto dentro do OneDrive ou de outra pasta sincronizada: a sincronização trava arquivos da pasta Library.

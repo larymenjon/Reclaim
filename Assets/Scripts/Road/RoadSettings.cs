@@ -36,6 +36,9 @@ namespace Reclaim.Road
         [Tooltip("Distância mínima entre dois pontos colocados.")]
         [SerializeField] private float minPointDistance = 2f;
 
+        [Tooltip("Quanto o mouse precisa arrastar (em metros) ao colocar um ponto para fixar a direção da curva.")]
+        [SerializeField, Min(0.2f)] private float dragThreshold = 1.5f;
+
         [Header("Preview LineRenderer")]
         [SerializeField] private Material previewMaterial;
         [SerializeField] private float previewWidth = 3f;
@@ -54,6 +57,7 @@ namespace Reclaim.Road
         public int CrossSectionVerts => crossSectionVerts;
         public float CenterDepression => centerDepression;
         public float MinPointDistance => minPointDistance;
+        public float DragThreshold => dragThreshold;
         public Material PreviewMaterial => previewMaterial;
         public float PreviewWidth => previewWidth;
         public LayerMask TerrainLayer => terrainLayer;

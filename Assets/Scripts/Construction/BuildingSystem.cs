@@ -120,7 +120,7 @@ namespace Reclaim.Construction
 
         private void ShowPreviewFor(BuildingData data)
         {
-            _previewSystem.SetPreviewPrefab(data.Prefab);
+            _previewSystem.SetPreviewPrefab(data.CompletedStagePrefab != null ? data.CompletedStagePrefab : data.Prefab, data, _gridManager.CellSize);
             _previewSystem.SetVisible(false);
         }
 
@@ -179,7 +179,7 @@ namespace Reclaim.Construction
 
             Building building = root.AddComponent<Building>();
             building.OnConstructionCompleted += HandleBuildingCompleted;
-            building.Initialize(data, originCell, _rotationSteps, cells);
+            building.Initialize(data, originCell, _rotationSteps, cells, _gridManager.CellSize);
             _gridManager.SetOccupancy(cells, OccupancyType.Building, root);
 
             _history.Record(() => UndoPlacement(building, data, cells));

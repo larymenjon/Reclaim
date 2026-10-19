@@ -19,7 +19,7 @@ namespace Reclaim.Construction
         private Renderer[] _renderers;
         private bool _isValid = true;
 
-        public void SetPreviewPrefab(GameObject prefab)
+        public void SetPreviewPrefab(GameObject prefab, BuildingData fitTo = null, float cellSize = 1f)
         {
             ClearPreview();
 
@@ -28,14 +28,26 @@ namespace Reclaim.Construction
                 return;
             }
 
-            _previewInstance = Instantiate(prefab);
-            _previewInstance.name = $"{prefab.name}_Preview";
+            _previewInstance = new GameObject($"{prefab.name}_Preview");
+            GameObject model = Instantiate(prefab, _previewInstance.transform);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
             _renderers = _previewInstance.GetComponentsInChildren<Renderer>(true);
 
             Collider[] colliders = _previewInstance.GetComponentsInChildren<Collider>(true);
             for (int i = 0; i < colliders.Length; i++)
             {
                 colliders[i].enabled = false;
+            }
+
+            if (fitTo != null && fitTo.FitToFootprint)
+            {
+                BuildingVisualFit.Fit(model.transform, _previewInstance.transform, new Vector2(fitTo.Size.x, fitTo.Size.y) * (cellSize * fitTo.FootprintFill));
+            }
+            else
+            {
+                model.transform.localScale *= fitTo != null ? fitTo.VisualScale : 1f;
+                BuildingVisualFit.Ground(model.transform, _previewInstance.transform);
             }
 
             ApplyPreviewColor();

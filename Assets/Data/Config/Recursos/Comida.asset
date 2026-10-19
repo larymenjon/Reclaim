@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Comida
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 0
-  displayName: "Comida"
-  icon: {fileID: 0}
-  unitLabel: "DIAS"
+  displayName: Comida
+  icon: {fileID: 21300000, guid: 399f552338200be4890297299639d15e, type: 3}
+  unitLabel: DIAS
   isConsumable: 1
   startingAmount: 400
   storageCapacity: 600

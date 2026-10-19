@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Sucata
   m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Economy.ResourceDefinition
   resourceType: 3
-  displayName: "Sucata"
-  icon: {fileID: 0}
-  unitLabel: "UN."
+  displayName: Sucata
+  icon: {fileID: 21300000, guid: 246abde5903714f438895b16af6417be, type: 3}
+  unitLabel: UN.
   isConsumable: 0
   startingAmount: 120
   storageCapacity: 500
