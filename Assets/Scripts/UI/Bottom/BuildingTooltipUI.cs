@@ -1,4 +1,5 @@
-﻿using Reclaim.Building;
+using Reclaim.Construction;
+using Reclaim.Input;
 using TMPro;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace Reclaim.UI.Bottom
         [SerializeField] private Vector2 screenOffset = new Vector2(20f, 24f);
         [SerializeField] private bool clampInsideCanvas = true;
 
-        private UnityEngine.Camera _uiCamera;
+        private Camera _uiCamera;
         private bool _isVisible;
 
         private void Awake()
@@ -48,7 +49,7 @@ namespace Reclaim.UI.Bottom
         {
             if (_isVisible)
             {
-                SetPosition(UnityEngine.Input.mousePosition);
+                SetPosition(PointerInput.Position);
             }
         }
 

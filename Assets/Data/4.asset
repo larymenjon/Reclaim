@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 4
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: Nara Sun
   description: "Nara nunca se sentiu confort\xE1vel sob um teto. Ela conhece as rotas
     silenciosas e os perigos que espreitam nas ru\xEDnas.\n\nExpedi\xE7\xF5es retornam
@@ -23,3 +23,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 4
+  passiveName: "Caminhos Ocultos"
+  passiveDescription: "Descobre áreas secretas."
+  activeName: "Expedição Rápida"
+  activeDescription: "Reduz tempo de exploração drasticamente."
+  activeCooldownDays: 10
+  dilemmaName: "Zona Mortal"
+  dilemmaDescription: "Explorar área com altíssimo risco?"

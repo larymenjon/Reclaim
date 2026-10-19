@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 7
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: "Capit\xE3o Kaelen Reed"
   description: "Um homem forjado nas cinzas da guerra. Para ele, a cidade n\xE3o
     \xE9 um lar, \xE9 uma posi\xE7\xE3o defensiva que n\xE3o pode cair.\n\nAumenta
@@ -23,3 +23,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 1
+  passiveName: "Doutrina de Combate"
+  passiveDescription: "Unidades defensivas mais eficientes."
+  activeName: "Lei Marcial"
+  activeDescription: "Reduz revoltas drasticamente por um tempo."
+  activeCooldownDays: 10
+  dilemmaName: "Toque de Recolher"
+  dilemmaDescription: "Impor controle total da população?"

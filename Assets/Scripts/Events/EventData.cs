@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Reclaim.Survival.Core;
+using Reclaim.Simulation;
 using UnityEngine;
 
-namespace Reclaim.Survival.Events
+namespace Reclaim.Events
 {
     public enum EventTriggerMode
     {
@@ -10,13 +10,18 @@ namespace Reclaim.Survival.Events
         ConditionalCritical = 1
     }
 
-    [CreateAssetMenu(fileName = "EventData", menuName = "Reclaim/Survival/Event Data")]
+    /// <summary>
+    /// Um evento com dilema: texto, condições de disparo e escolhas.
+    /// Eventos críticos têm prioridade sobre os sorteados e pausam o jogo até a resposta.
+    /// </summary>
+    [CreateAssetMenu(fileName = "Evento", menuName = "Reclaim/Eventos/Evento")]
     public class EventData : ScriptableObject
     {
         [Header("Identity")]
         [SerializeField] private string eventId = "event_01";
-        [SerializeField] private string title = "Critical Situation";
-        [SerializeField, TextArea] private string description = "An event requires your decision.";
+        [SerializeField] private string title = "Situação crítica";
+        [SerializeField, TextArea] private string description = "Um evento exige sua decisão.";
+        [SerializeField] private Sprite icon;
 
         [Header("Trigger Settings")]
         [SerializeField] private EventTriggerMode triggerMode = EventTriggerMode.RandomWeighted;
@@ -43,13 +48,15 @@ namespace Reclaim.Survival.Events
         public string EventId => eventId;
         public string Title => title;
         public string Description => description;
+        public Sprite Icon => icon;
+        public bool IsCritical => triggerMode == EventTriggerMode.ConditionalCritical;
         public EventTriggerMode TriggerMode => triggerMode;
         public float BaseWeight => Mathf.Max(0.01f, baseWeight);
         public int CooldownTicks => Mathf.Max(0, cooldownTicks);
         public bool OneShot => oneShot;
         public IReadOnlyList<EventChoice> Choices => choices;
 
-        public bool CanTrigger(GameStateSnapshot snapshot, int currentDay, int currentTick, int lastTriggerTick, HashSet<string> firedOneShots)
+        public bool CanTrigger(ColonySnapshot snapshot, int currentDay, int currentTick, int lastTriggerTick, HashSet<string> firedOneShots)
         {
             if (oneShot && firedOneShots.Contains(eventId))
             {

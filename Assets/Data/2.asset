@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 2
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: "Dr.\xAA Maya Thorne"
   description: "Maya acredita que a Terra ainda pode perdoar a humanidade. Ela foca
     em ciclos sustent\xE1veis e na pureza da \xE1gua.\n\nEstufas produzem 20% mais
@@ -23,3 +23,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 2
+  passiveName: "Cultivo Sustentável"
+  passiveDescription: "Produção de comida aumentada."
+  activeName: "Solo Regenerativo"
+  activeDescription: "Recupera áreas contaminadas lentamente."
+  activeCooldownDays: 10
+  dilemmaName: "Fertilizante Proibido"
+  dilemmaDescription: "Usar químicos para aumentar produção?"

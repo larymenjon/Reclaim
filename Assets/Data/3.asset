@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9383187a01fad4042a9fd1c658dd5476, type: 3}
   m_Name: 3
-  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Data.LeaderData
+  m_EditorClassIdentifier: Assembly-CSharp::Reclaim.Leaders.LeaderData
   leaderName: Dr. Silas Vane
   description: "Silas j\xE1 viu gente demais morrer por falta de um simples antibi\xF3tico.
     Sua exaust\xE3o \xE9 proporcional \xE0 sua precis\xE3o cir\xFArgica.\n\nReduz
@@ -23,3 +23,11 @@ MonoBehaviour:
   foodEfficiency: 1
   explorationSpeed: 1
   startingScrap: 100
+  specialization: 3
+  passiveName: "Triagem Rigorosa"
+  passiveDescription: "Cura mais eficiente com menos recursos."
+  activeName: "Decisão Clínica"
+  activeDescription: "Salva parte da população em situações críticas."
+  activeCooldownDays: 10
+  dilemmaName: "Quem Vive?"
+  dilemmaDescription: "Recursos insuficientes para todos."

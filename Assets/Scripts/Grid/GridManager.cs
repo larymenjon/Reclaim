@@ -284,7 +284,7 @@ namespace Reclaim.Grid
 
             if (sourceTerrain == null)
             {
-                sourceTerrain = FindFirstObjectByType<Terrain>();
+                sourceTerrain = FindAnyObjectByType<Terrain>();
             }
 
             if (sourceTerrain == null || sourceTerrain.terrainData == null)

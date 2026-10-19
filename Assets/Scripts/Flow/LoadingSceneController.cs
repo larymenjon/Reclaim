@@ -1,16 +1,14 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using Reclaim.Input;
 
 namespace Reclaim.Flow
 {
     /// <summary>
-    /// Handles transition from loading scene to game scene with async loading and rotating tips/slides.
+    /// Tela de carregamento: carrega a cena de jogo em segundo plano enquanto alterna slides e dicas.
     /// </summary>
     public class LoadingSceneController : MonoBehaviour
     {
@@ -237,12 +235,7 @@ namespace Reclaim.Flow
         {
             if (slideImage == null)
             {
-                slideImage = FindFirstObjectByType<Image>();
-            }
-
-            if (captionText == null)
-            {
-                captionText = FindFirstObjectByType<Text>();
+                Debug.LogWarning("[LoadingSceneController] Slide Image não configurada; os slides não serão exibidos.", this);
             }
 
             if (captionText == null)
@@ -306,7 +299,7 @@ namespace Reclaim.Flow
 
         private Text CreateCaptionText()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindAnyObjectByType<Canvas>();
             if (canvas == null)
             {
                 return null;
@@ -343,7 +336,7 @@ namespace Reclaim.Flow
 
         private Image CreateFadeOverlay()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindAnyObjectByType<Canvas>();
             if (canvas == null)
             {
                 return null;
@@ -365,190 +358,6 @@ namespace Reclaim.Flow
             return overlay;
         }
 
-        private static bool HasSkipInput()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
-            {
-                return true;
-            }
-
-            if (Mouse.current != null)
-            {
-                return Mouse.current.leftButton.wasPressedThisFrame ||
-                       Mouse.current.rightButton.wasPressedThisFrame;
-            }
-#endif
-
-            return UnityEngine.Input.anyKeyDown;
-        }
-    }
-
-    /// <summary>
-    /// Temporary state used to carry transition intent from Loading to the next scene.
-    /// </summary>
-    public static class LoadingTransitionState
-    {
-        private static bool lensZoomRequested;
-        private static string targetSceneName = string.Empty;
-
-        public static void RequestLensZoomTransition(string sceneName)
-        {
-            lensZoomRequested = true;
-            targetSceneName = sceneName ?? string.Empty;
-        }
-
-        public static bool ConsumeLensZoomRequestForScene(string sceneName)
-        {
-            if (!lensZoomRequested)
-            {
-                return false;
-            }
-
-            bool matchesTarget = string.IsNullOrWhiteSpace(targetSceneName) ||
-                                 string.Equals(targetSceneName, sceneName, System.StringComparison.Ordinal);
-
-            lensZoomRequested = false;
-            targetSceneName = string.Empty;
-            return matchesTarget;
-        }
-    }
-
-    /// <summary>
-    /// Applies a short lens-like zoom out when entering gameplay from Loading.
-    /// </summary>
-    public class GameEntryLensZoomTransition : MonoBehaviour
-    {
-        [SerializeField, Min(0.05f)] private float transitionDurationSeconds = 1.25f;
-        [SerializeField, Range(0.1f, 1f)] private float startFovMultiplier = 0.45f;
-        [SerializeField] private bool useUnscaledTime = true;
-
-        private UnityEngine.Camera targetCamera;
-        private Image overlayImage;
-        private Canvas overlayCanvas;
-        private float targetFieldOfView;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void RegisterSceneHook()
-        {
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
-            SceneManager.sceneLoaded += HandleSceneLoaded;
-        }
-
-        private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (!LoadingTransitionState.ConsumeLensZoomRequestForScene(scene.name))
-            {
-                return;
-            }
-
-            UnityEngine.Camera camera = UnityEngine.Camera.main ?? FindFirstObjectByType<UnityEngine.Camera>();
-            if (camera == null)
-            {
-                return;
-            }
-
-            if (camera.GetComponent<GameEntryLensZoomTransition>() == null)
-            {
-                camera.gameObject.AddComponent<GameEntryLensZoomTransition>();
-            }
-        }
-
-        private void Awake()
-        {
-            targetCamera = GetComponent<Camera>();
-            if (targetCamera == null)
-            {
-                targetCamera = UnityEngine.Camera.main ?? FindFirstObjectByType<UnityEngine.Camera>();
-            }
-        }
-
-        private void OnEnable()
-        {
-            StartCoroutine(PlayTransition());
-        }
-
-        private IEnumerator PlayTransition()
-        {
-            if (targetCamera == null)
-            {
-                Destroy(this);
-                yield break;
-            }
-
-            targetFieldOfView = targetCamera.fieldOfView;
-            float startFieldOfView = Mathf.Clamp(targetFieldOfView * startFovMultiplier, 12f, targetFieldOfView);
-
-            targetCamera.fieldOfView = startFieldOfView;
-            CreateOverlay();
-            SetOverlayAlpha(1f);
-
-            float elapsed = 0f;
-            while (elapsed < transitionDurationSeconds)
-            {
-                float delta = useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
-                elapsed += delta;
-                float t = Mathf.Clamp01(elapsed / transitionDurationSeconds);
-                float eased = 1f - Mathf.Pow(1f - t, 3f);
-
-                targetCamera.fieldOfView = Mathf.Lerp(startFieldOfView, targetFieldOfView, eased);
-                SetOverlayAlpha(Mathf.Lerp(1f, 0f, eased));
-                yield return null;
-            }
-
-            targetCamera.fieldOfView = targetFieldOfView;
-            SetOverlayAlpha(0f);
-
-            if (overlayCanvas != null)
-            {
-                Destroy(overlayCanvas.gameObject);
-            }
-
-            Destroy(this);
-        }
-
-        private void CreateOverlay()
-        {
-            if (overlayCanvas != null)
-            {
-                return;
-            }
-
-            GameObject canvasObject = new GameObject("GameEntryFadeCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            overlayCanvas = canvasObject.GetComponent<Canvas>();
-            overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            overlayCanvas.sortingOrder = short.MaxValue;
-
-            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            GameObject imageObject = new GameObject("FadeImage", typeof(RectTransform), typeof(Image));
-            imageObject.transform.SetParent(canvasObject.transform, false);
-
-            RectTransform rect = imageObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            overlayImage = imageObject.GetComponent<Image>();
-            overlayImage.color = Color.black;
-            overlayImage.raycastTarget = false;
-        }
-
-        private void SetOverlayAlpha(float alpha)
-        {
-            if (overlayImage == null)
-            {
-                return;
-            }
-
-            Color color = overlayImage.color;
-            color.a = Mathf.Clamp01(alpha);
-            overlayImage.color = color;
-        }
+        private static bool HasSkipInput() => PointerInput.AnyButtonOrKeyPressedThisFrame;
     }
 }
-

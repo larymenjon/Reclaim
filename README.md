@@ -1,112 +1,47 @@
 <p align="center">
-    <a href="https://ibb.co/WNNpdgtN">
-        <img src="https://i.ibb.co/Y44TKpZ4/29727b9c-3a37-4d24-96f3-89b9d39f9af0-1.png" alt="RECLAIM Banner" border="0" style="max-width: 100%; height: auto;"
+  <img src="https://i.ibb.co/Y44TKpZ4/29727b9c-3a37-4d24-96f3-89b9d39f9af0-1.png" alt="RECLAIM" style="max-width: 100%; height: auto;"/>
 </p>
-<h3 align="center">Rebuild the World. Survive the Cost.</h3>
+
+<h3 align="center">Reconstrua o mundo. Pague o preço.</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Engine-Unity-black?style=for-the-badge&logo=unity"/>
-  <img src="https://img.shields.io/badge/Language-C%23-purple?style=for-the-badge&logo=csharp"/>
-  <img src="https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Genre-City%20Builder%20%7C%20Survival%20%7C%20Strategy-blue?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Unity-6.6-black?style=for-the-badge&logo=unity"/>
+  <img src="https://img.shields.io/badge/C%23-9-purple?style=for-the-badge&logo=csharp"/>
+  <img src="https://img.shields.io/badge/Status-Alpha-yellow?style=for-the-badge"/>
 </p>
 
----
+RECLAIM é um city builder de sobrevivência pós-apocalíptico em que cada escolha tem custo humano. Você lidera famílias sobreviventes, constrói a colônia em um grid 3D e tenta atravessar o inverno com comida, água e esperança contadas em dias.
 
-## Banner
+## Estado atual (alpha)
 
-<p align="center">
-  <img src="docs/images/banner.png" alt="RECLAIM Banner"/>
-</p>
+Funciona hoje: construção em grid com estágios de obra e desfazer, estradas com curva, floresta com corte automático, famílias com fome, saúde, moral, doença, nascimento e morte, clima por estação, esperança coletiva, diretor de eventos com dilemas, fluxo de Intro, Menu, Novo Jogo e Loading.
 
----
+Em desenvolvimento: HUD do redesign do Figma, moradia e aquecimento, produção com poço e horta, conteúdo de eventos.
 
-## About the Game
+O plano completo está no [GDD](docs/GDD.md).
 
-RECLAIM is a post-apocalyptic City Builder, Survival, and Strategy game where you don't just manage buildings—you lead the last remnants of humanity.
+## Como abrir o projeto
 
-In a world defined by absolute scarcity and constant threats, your mission is to reconstruct civilization from the ground up.
+1. Instale o [Git LFS](https://git-lfs.com) e rode `git lfs install`. Cenas e modelos ficam no LFS.
+2. Clone: `git clone https://github.com/larymenjon/reclaim.git`
+3. Abra no Unity Hub com a versão **6000.6.x**.
+4. Abra `Assets/Scenes/Game.unity` e use o menu **Reclaim > Configurar cena de jogo** se a cena ainda não tiver o objeto "Simulação".
+5. Para jogar o fluxo completo, comece pela cena `Intro`.
 
-Every brick laid and every life saved comes with a price.
+Evite deixar o projeto dentro do OneDrive ou de outra pasta sincronizada: a sincronização trava arquivos da pasta Library.
 
-Managing the emotional state of your population is just as critical as gathering resources.
+## Estrutura
 
----
+```
+Assets/
+  Scripts/       código, um namespace por pasta (ver GDD, seção 11)
+  Data/Config/   recursos, clima e famílias iniciais em ScriptableObjects
+  Data/          líderes e construções
+  Prefabs/  Scenes/  UI/  Imports/
+docs/GDD.md      design do jogo
+STYLE_GUIDE.md   padrão de código
+```
 
-## Project Status
+## Equipe
 
-Currently in active development.
-
-The project is focused on balancing:
-- Urban expansion  
-- Biological survival  
-- Psychological impact of decisions  
-
----
-
-## Game Theme
-
-The old world has fallen. What remains is silence, scrap, and danger.
-
-You lead a small group of survivors. Your goal is to transform a fragile camp into a functioning stronghold.
-
-Progress attracts threats:
-- Zombie hordes  
-- Environmental pressure  
-- Resource scarcity  
-
-Core theme: Reclamation — taking back the Earth, one resource at a time.
-
----
-
-## Gameplay Overview
-
-Gather and Build  
-Collect wood, scrap, and fuel to construct housing, laboratories, and defenses.
-
-Population Management  
-Families have health, hunger, and happiness. Poor conditions can lead to collapse or rebellion.
-
-Exploration  
-Send expeditions into the unknown to find rare resources and face narrative-driven events.
-
-Crisis and Decision  
-Handle disease outbreaks, zombie attacks, and shortages. Every decision impacts survival.
-
-Systems and Features
-System	Description
-Resources	Wood, Scrap, Food, Water, Fuel, Medicine, Ammo
-Population	Families, Happiness, Health, Hunger
-Construction	Housing, Production, Storage, Defense, Roads, Labs
-Exploration	Expeditions, Resource scavenging, Events
-Threats	Zombie hordes, Diseases, Resource depletion
-Player Fantasy
-
-"I want to feel like I am rebuilding the world from scratch and that every decision could either save or condemn my city."
-
-Screenshots
-
-Place images in: docs/images/
-
-<p align="center"> <img src="docs/images/screenshot1.png" width="400"/> <img src="docs/images/screenshot2.png" width="400"/> </p>
-
-___
-
-RECLAIM Team
-
-Game Design, 
-Programming 
-Art
-Modeling
-
-## Core Loop
-
-```mermaid
-graph LR
-    A[Gather Resources] --> B[Construction]
-    B --> C[Population Growth]
-    C --> D[Crisis / Event]
-    D --> E[Player Decision]
-    E --> F[Expansion or Collapse]
-    F --> A
-
+Laryssa Aguiar Menjon: game design, programação e UI/UX.

@@ -1,20 +1,18 @@
 ﻿using System;
 using Reclaim.Grid;
 using UnityEngine;
-using UnityEngine.EventSystems;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 
 namespace Reclaim.Input
 {
     /// <summary>
-    /// Converts raw input into grid-based events.
+    /// Converte o ponteiro do mouse em coordenadas do grid e dispara eventos de alto nível
+    /// (mover, clicar, cancelar, girar, desfazer) para os sistemas de construção.
     /// </summary>
     public class InputHandler : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private UnityEngine.Camera inputCamera;
+        [SerializeField] private Camera inputCamera;
         [SerializeField] private GridManager gridManager;
 
         [Header("Raycast")]
@@ -22,12 +20,15 @@ namespace Reclaim.Input
         [SerializeField] private float maxRayDistance = 1000f;
         [SerializeField] private bool preferTerrainHit = true;
 
+        [Header("Keys")]
+        [SerializeField] private Key rotateKey = Key.R;
+        [SerializeField] private Key undoKey = Key.Z;
+
+        private bool _hasLastCell;
+        private GridCoordinate _lastCell;
+
         public event Action<GridCoordinate, Vector3> OnPointerMoved;
         public event Action<GridCoordinate, Vector3> OnPrimaryPressed;
-        public event Action<GridCoordinate, Vector3> OnPrimaryHeld;
-        public event Action<GridCoordinate, Vector3> OnPrimaryReleased;
-        public event Action<GridCoordinate, Vector3> OnDeletePressed;
-        public event Action<GridCoordinate, Vector3> OnDeleteHeld;
         public event Action OnSecondaryPressed;
         public event Action OnRotatePressed;
         public event Action OnUndoPressed;
@@ -36,7 +37,7 @@ namespace Reclaim.Input
         {
             if (inputCamera == null)
             {
-                inputCamera = UnityEngine.Camera.main;
+                inputCamera = Camera.main;
             }
         }
 
@@ -47,54 +48,33 @@ namespace Reclaim.Input
                 return;
             }
 
-            bool hasGridPosition = TryGetMouseGridPosition(out GridCoordinate coordinate, out Vector3 worldPoint);
-            bool isPointerOverUI = IsPointerOverUI();
+            bool hasCell = TryGetPointerCell(out GridCoordinate cell, out Vector3 worldPoint);
+            bool pointerOverUI = PointerInput.IsOverUI;
 
-            if (hasGridPosition)
+            if (hasCell && (!_hasLastCell || !cell.Equals(_lastCell)))
             {
-                OnPointerMoved?.Invoke(coordinate, worldPoint);
+                OnPointerMoved?.Invoke(cell, worldPoint);
             }
 
-            if (!isPointerOverUI && hasGridPosition && GetPrimaryMouseDown())
+            _hasLastCell = hasCell;
+            _lastCell = cell;
+
+            if (!pointerOverUI && hasCell && PointerInput.PrimaryPressedThisFrame)
             {
-                if (IsDeleteModifierHeld())
-                {
-                    OnDeletePressed?.Invoke(coordinate, worldPoint);
-                }
-                else
-                {
-                    OnPrimaryPressed?.Invoke(coordinate, worldPoint);
-                }
+                OnPrimaryPressed?.Invoke(cell, worldPoint);
             }
 
-            if (!isPointerOverUI && hasGridPosition && GetPrimaryMouseHeld())
-            {
-                if (IsDeleteModifierHeld())
-                {
-                    OnDeleteHeld?.Invoke(coordinate, worldPoint);
-                }
-                else
-                {
-                    OnPrimaryHeld?.Invoke(coordinate, worldPoint);
-                }
-            }
-
-            if (!isPointerOverUI && hasGridPosition && GetPrimaryMouseUp())
-            {
-                OnPrimaryReleased?.Invoke(coordinate, worldPoint);
-            }
-
-            if (!isPointerOverUI && GetSecondaryMouseDown())
+            if (!pointerOverUI && PointerInput.SecondaryPressedThisFrame)
             {
                 OnSecondaryPressed?.Invoke();
             }
 
-            if (GetRotatePressed())
+            if (PointerInput.KeyPressedThisFrame(rotateKey))
             {
                 OnRotatePressed?.Invoke();
             }
 
-            if (GetUndoPressed())
+            if (PointerInput.KeyPressedThisFrame(undoKey))
             {
                 OnUndoPressed?.Invoke();
             }
@@ -103,21 +83,20 @@ namespace Reclaim.Input
         public void SetGridManager(GridManager manager)
         {
             gridManager = manager;
+            _hasLastCell = false;
         }
 
-        private bool TryGetMouseGridPosition(out GridCoordinate coordinate, out Vector3 worldPoint)
+        private bool TryGetPointerCell(out GridCoordinate cell, out Vector3 worldPoint)
         {
-            coordinate = default;
-            worldPoint = default;
+            cell = default;
+            Ray ray = inputCamera.ScreenPointToRay(PointerInput.Position);
 
-            Vector2 mousePosition = GetMousePosition();
-            Ray ray = inputCamera.ScreenPointToRay(mousePosition);
             if (!TryGetWorldPoint(ray, out worldPoint))
             {
                 return false;
             }
 
-            return gridManager.TryWorldToGrid(worldPoint, out coordinate);
+            return gridManager.TryWorldToGrid(worldPoint, out cell);
         }
 
         private bool TryGetWorldPoint(Ray ray, out Vector3 worldPoint)
@@ -149,13 +128,7 @@ namespace Reclaim.Input
             worldPoint = default;
 
             Terrain terrain = Terrain.activeTerrain;
-            if (terrain == null)
-            {
-                return false;
-            }
-
-            TerrainCollider terrainCollider = terrain.GetComponent<TerrainCollider>();
-            if (terrainCollider == null || !terrainCollider.enabled)
+            if (terrain == null || !terrain.TryGetComponent(out TerrainCollider terrainCollider) || !terrainCollider.enabled)
             {
                 return false;
             }
@@ -168,92 +141,5 @@ namespace Reclaim.Input
             worldPoint = hit.point;
             return true;
         }
-
-        private static Vector2 GetMousePosition()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-#else
-            return UnityEngine.Input.mousePosition;
-#endif
-        }
-
-        private static bool GetPrimaryMouseDown()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-            return UnityEngine.Input.GetMouseButtonDown(0);
-#endif
-        }
-
-        private static bool GetPrimaryMouseHeld()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.isPressed;
-#else
-            return UnityEngine.Input.GetMouseButton(0);
-#endif
-        }
-
-        private static bool GetPrimaryMouseUp()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
-#else
-            return UnityEngine.Input.GetMouseButtonUp(0);
-#endif
-        }
-
-        private static bool GetSecondaryMouseDown()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
-#else
-            return UnityEngine.Input.GetMouseButtonDown(1);
-#endif
-        }
-
-        private static bool GetRotatePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
-#else
-            return UnityEngine.Input.GetKeyDown(KeyCode.R);
-#endif
-        }
-
-        private static bool GetUndoPressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Keyboard.current != null && Keyboard.current.zKey.wasPressedThisFrame;
-#else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Z);
-#endif
-        }
-
-        private static bool IsDeleteModifierHeld()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Keyboard.current != null && (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed);
-#else
-            return UnityEngine.Input.GetKey(KeyCode.LeftControl) || UnityEngine.Input.GetKey(KeyCode.RightControl);
-#endif
-        }
-
-        private static bool IsPointerOverUI()
-        {
-            if (EventSystem.current == null)
-            {
-                return false;
-            }
-
-#if ENABLE_INPUT_SYSTEM
-            return EventSystem.current.IsPointerOverGameObject();
-#else
-            return EventSystem.current.IsPointerOverGameObject();
-#endif
-        }
     }
 }
-
