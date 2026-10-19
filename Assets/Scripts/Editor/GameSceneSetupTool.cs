@@ -157,15 +157,25 @@ namespace Reclaim.EditorTools
                 return existing.gameObject;
             }
 
+            // Cenas antigas já têm NeedsSystem e MoraleSystem num objeto próprio; reaproveita esse objeto.
+            NeedsSystem legacyNeeds = FindInScene<NeedsSystem>();
+            if (legacyNeeds != null)
+            {
+                Undo.RecordObject(legacyNeeds.gameObject, "Renomear Simulação");
+                legacyNeeds.gameObject.name = SimulationObjectName;
+                return legacyNeeds.gameObject;
+            }
+
             GameObject root = new GameObject(SimulationObjectName);
             Undo.RegisterCreatedObjectUndo(root, "Criar Simulação");
             return root;
         }
 
+        /// <summary>Reaproveita o componente se ele já existir em qualquer lugar da cena, para não duplicar sistemas.</summary>
         private static T Ensure<T>(GameObject root) where T : Component
         {
-            T component = root.GetComponent<T>();
-            return component != null ? component : Undo.AddComponent<T>(root);
+            T existing = FindInScene<T>();
+            return existing != null ? existing : Undo.AddComponent<T>(root);
         }
 
         private static void Wire(Object target, string propertyName, Object value)
